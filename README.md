@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docu/sts2-endless-plus.png" alt="Slay the Spire 2 - EndlessPlus" width="550"/>
+</p>
+
 # EndlessPlus (Slay the Spire 2 Mod)
 
 Play **Slay the Spire 2** forever in an endless loop!

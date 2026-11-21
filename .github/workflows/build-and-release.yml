@@ -110,6 +110,9 @@ jobs:
           Copy-Item "BNKZ.STS2.EndlessPlus.json" -Destination $distDir
           Copy-Item "BNKZ.STS2.EndlessPlus.config" -Destination $distDir
           Copy-Item "README.md" -Destination $distDir
+          if (Test-Path "docu") {
+            Copy-Item "docu" -Destination $distDir -Recurse
+          }
           if (Test-Path "bin/Release/BNKZ.STS2.EndlessPlus.xml") {
             Copy-Item "bin/Release/BNKZ.STS2.EndlessPlus.xml" -Destination $distDir
           }
