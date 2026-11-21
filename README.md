@@ -19,7 +19,7 @@ When you beat the final boss, your run does not end. You keep your character, de
 ## Requirements
 
 - **Slay the Spire 2** (Steam version v0.111.1 or newer)
-- **BaseLib** (Required mod for the settings menu)
+- **BaseLib** (*Optional* — only needed if you want the in-game settings menu. You can also configure the mod via text file without it)
 
 ---
 
@@ -31,7 +31,7 @@ When you beat the final boss, your run does not end. You keep your character, de
    ```
    C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods\EndlessPlus
    ```
-4. Make sure `BaseLib` is also in your `mods` folder.
+4. *(Optional)* Install `BaseLib` in your `mods` folder if you want the in-game GUI menu.
 5. Launch Slay the Spire 2 and enjoy!
 
 ---
@@ -40,10 +40,10 @@ When you beat the final boss, your run does not end. You keep your character, de
 
 You can change settings in two ways:
 
-### 1. In-Game Menu
+### 1. In-Game Menu (Requires BaseLib)
 Open **Options** → **Mods** → **EndlessPlus** to adjust sliders and dropdowns.
 
-### 2. Config File
+### 2. Config File (No BaseLib Needed)
 Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any text editor (Notepad, VS Code). Changes save and reload instantly!
 
 ### Settings Explained

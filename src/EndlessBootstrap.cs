@@ -112,21 +112,12 @@ internal static class EndlessBootstrap
 		{
 			EndlessLog.Info("Initializing BNKZ EndlessPlus v1.0.0.");
 			EndlessConfig.Load();
-			try
-			{
-				BaseLib.Config.ModConfigRegistry.Register("BNKZ.STS2.EndlessPlus", new EndlessPlusModConfig());
-				EndlessPlusModConfig.SyncFromEndlessConfig();
-				EndlessLog.Info("Registered EndlessPlus with BaseLib Mod Configuration.");
-			}
-			catch (Exception ex)
-			{
-				EndlessLog.Warn("Failed to register with BaseLib ModConfig: " + ex.Message);
-			}
+			BaseLibIntegration.TryRegister();
 			LinuxNativeBootstrap.PrepareForHarmony();
 			int attemptedPatches = 0;
 			int successfulPatches = 0;
 			bool flag = OS.GetName().Equals("Android", StringComparison.OrdinalIgnoreCase);
-			TryPatch("LocManager.Initialize", AccessTools.Method(typeof(MegaCrit.Sts2.Core.Localization.LocManager), "Initialize", (Type[])null, (Type[])null), null, new HarmonyMethod(typeof(EndlessPlusModConfig), "RegisterLocalizations", (Type[])null), ref attemptedPatches, ref successfulPatches);
+			TryPatch("LocManager.Initialize", AccessTools.Method(typeof(MegaCrit.Sts2.Core.Localization.LocManager), "Initialize", (Type[])null, (Type[])null), null, new HarmonyMethod(typeof(BaseLibIntegration), nameof(BaseLibIntegration.OnLocManagerInitialize), (Type[])null), ref attemptedPatches, ref successfulPatches);
 			TryPatch("RunManager.SetActInternal", EndlessReflection.RunManagerSetActInternal, new HarmonyMethod(typeof(RunManagerPatches), "BeforeSetActInternal", (Type[])null), null, ref attemptedPatches, ref successfulPatches);
 			TryPatch("RunManager.Launch", AccessTools.Method(typeof(RunManager), "Launch", (Type[])null, (Type[])null), null, new HarmonyMethod(typeof(RunManagerPatches), "AfterLaunch", (Type[])null), ref attemptedPatches, ref successfulPatches);
 			TryPatch("RunManager.SetUpSavedMultiplayer", AccessTools.Method(typeof(RunManager), "SetUpSavedMultiplayer", (Type[])null, (Type[])null), null, new HarmonyMethod(typeof(GameLifecyclePatches), "AfterSetUpSavedMultiplayer", (Type[])null), ref attemptedPatches, ref successfulPatches);

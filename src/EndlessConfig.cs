@@ -241,7 +241,7 @@ internal static class EndlessConfig
 			}
 
 			EndlessLog.Info($"Loaded endless config from '{ConfigPath}': interval={Interval}, curve={Curve}, hp_scale={EnemyHpScalingPerChapter:0.###}, dmg_scale={EnemyDamageScalingPerChapter:0.###}, flat_hp={FlatHpPerStep}, flat_dmg={FlatDmgPerStep}, skip_chapter={!ScaleChapterOne}.");
-			EndlessPlusModConfig.SyncFromEndlessConfig();
+			BaseLibIntegration.TrySyncFromEndlessConfig();
 		}
 		catch (Exception ex)
 		{
