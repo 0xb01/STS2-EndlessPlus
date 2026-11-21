@@ -14,7 +14,9 @@ When you beat the final boss, your run does not end. You keep your character, de
 
 - 🔄 **Endless Loops**: Beat the game and keep going. When an act or chapter finishes, the next one starts automatically.
 - 📈 **Custom Monster Scaling**: Make enemies stronger over time. You choose how much extra HP and damage they get.
-- 🤝 **Multiplayer Co-op Support**: Play with friends! Loop progression, HP scale, and damage scale rates sync from the host so the team advances together.
+- 🤝 **Full Multiplayer Config Sync**: Play with friends! Host rules (`interval`, `curve`, `skip_chapter`, `hp_scale`, `dmg_scale`, flat bonuses) sync across all players automatically with live ready indicators.
+- 🎒 **Relic Pagination & Scroll Guard**: Caps relic display to 3 rows max; mouse wheel scrolling and page button prevent late-game UI clutter.
+- ✨ **New Relic Indicator**: Shows a visual golden badge on newly acquired relics upon pickup, automatically fading out after 10 seconds.
 - ⚙️ **Easy Settings**: Change any setting in-game using the **BaseLib** mod menu, or by editing the config file.
 - ⚡ **Instant Updates**: Config changes apply immediately while playing — no need to restart the game.
 
@@ -61,6 +63,10 @@ Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any 
 | `dmg_scale` | `1.05` | Monster Attack Damage multiplier per step (`1.05` = +5% damage per step). |
 | `flat_hp_per_step` | `500` | Extra flat HP added to enemies per step (`500` adds +500 HP each step). |
 | `flat_dmg_per_step` | `2` | Extra flat damage added to enemy attacks per step (`2` adds +2 DMG each step). |
+| `min_hp_multiplier` | `1.0` | Minimum enemy HP multiplier floor (`1.0` = 1.0x). |
+| `max_hp_multiplier` | `0.0` | Maximum ceiling for enemy HP multiplier (`0.0` = uncapped). |
+| `min_dmg_multiplier` | `1.0` | Minimum enemy attack damage multiplier floor (`1.0` = 1.0x). |
+| `max_dmg_multiplier` | `0.0` | Maximum ceiling for enemy damage multiplier (`0.0` = uncapped). |
 | `ascension_per_loop` | `-1` | Ascension increase per loop: `-1` = vanilla, `0` = lock level, `1+` = increase each loop. |
 | `max_ascension` | `10` | Hard ceiling for Ascension level during endless runs. |
 | `override_hud` | `true` | When `true`, displays scaling stats in the top HUD banner. |
@@ -69,8 +75,8 @@ Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any 
 
 ## Co-op / Multiplayer Details
 
-- **Host Authority**: Loop transitions, Chapter advancement, and percentage multipliers (`hp_scale`, `dmg_scale`) sync from the host automatically.
-- **Config Sync**: Scaling interval (`interval`), curve formula (`curve`), and flat stat bonuses are evaluated locally; all players must use matching config settings to avoid combat math desyncs.
+- **Full Host Authority & Auto-Sync**: Host settings (`interval`, `curve`, `skip_chapter`, `hp_scale`, `dmg_scale`, `flat_hp_per_step`, `flat_dmg_per_step`) are automatically synchronized across all players via network metadata. Clients inherit host rules seamlessly with zero manual config matching required.
+- **Live Readiness Indicator**: The Game Over screen Endless button displays live player readiness count (e.g. `Endless (3/4 Ready)`).
 - **Hot-Reload Safety**: Config file reloads pause during active combat turns to prevent mid-fight desyncs.
 
 ---

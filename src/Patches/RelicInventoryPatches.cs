@@ -8,6 +8,11 @@ internal static class RelicInventoryPatches
 	{
 		try
 		{
+			if (relic != null)
+			{
+				RunUiPatches.RecordNewRelic(relic);
+			}
+
 			if (EndlessReflection.RelicInventoryHasHolderForRelic(__instance, relic))
 			{
 				return true;

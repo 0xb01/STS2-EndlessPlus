@@ -542,10 +542,11 @@ internal static class EndlessReflection
 			return null;
 		}
 		int value2 = (int)(ExtraRunFieldsTestSubjectKills.GetValue(value) ?? throw new InvalidOperationException("ExtraRunFields.TestSubjectKills returned null."));
-		int loopCount;
-		decimal hpScalePerChapter;
-		decimal damageScalePerChapter;
-		return TryDecodePersistedEndlessMetadata(value2, out loopCount, out hpScalePerChapter, out damageScalePerChapter) ? new int?(loopCount) : DecodePersistedEndlessLoopCount(value2);
+		if (TryDecodePersistedEndlessSettings(value2, out var settings))
+		{
+			return settings.LoopCount;
+		}
+		return DecodePersistedEndlessLoopCount(value2);
 	}
 
 	public static void SetPersistedEndlessLoopCount(object runState, int loopCount)
@@ -561,27 +562,48 @@ internal static class EndlessReflection
 
 	public static void SetPersistedEndlessMetadata(object runState, int loopCount, decimal hpScalePerChapter, decimal damageScalePerChapter)
 	{
+		EndlessScalingSettings settings = EndlessScalingSettings.FromConfig(loopCount);
+		settings.HpScale = hpScalePerChapter;
+		settings.DamageScale = damageScalePerChapter;
+		SetPersistedEndlessSettings(runState, settings);
+	}
+
+	public static void SetPersistedEndlessSettings(object runState, EndlessScalingSettings settings)
+	{
 		object obj = RunStateExtraFields.GetValue(runState);
 		if (obj == null)
 		{
 			obj = Activator.CreateInstance(RunStateExtraFields.PropertyType) ?? throw new InvalidOperationException("Could not create ExtraRunFields.");
 			RunStateExtraFields.SetValue(runState, obj);
 		}
-		ExtraRunFieldsTestSubjectKills.SetValue(obj, EncodePersistedEndlessMetadata(loopCount, hpScalePerChapter, damageScalePerChapter));
+		ExtraRunFieldsTestSubjectKills.SetValue(obj, EncodePersistedEndlessSettings(settings));
 	}
 
 	public static bool TryGetPersistedEndlessScaling(object runState, out int loopCount, out decimal hpScalePerChapter, out decimal damageScalePerChapter)
 	{
+		if (TryGetPersistedEndlessSettings(runState, out var settings))
+		{
+			loopCount = settings.LoopCount;
+			hpScalePerChapter = settings.HpScale;
+			damageScalePerChapter = settings.DamageScale;
+			return true;
+		}
 		loopCount = 0;
 		hpScalePerChapter = 0m;
 		damageScalePerChapter = 0m;
+		return false;
+	}
+
+	public static bool TryGetPersistedEndlessSettings(object runState, out EndlessScalingSettings settings)
+	{
+		settings = default;
 		object value = RunStateExtraFields.GetValue(runState);
 		if (value == null)
 		{
 			return false;
 		}
 		int value2 = (int)(ExtraRunFieldsTestSubjectKills.GetValue(value) ?? throw new InvalidOperationException("ExtraRunFields.TestSubjectKills returned null."));
-		return TryDecodePersistedEndlessMetadata(value2, out loopCount, out hpScalePerChapter, out damageScalePerChapter);
+		return TryDecodePersistedEndlessSettings(value2, out settings);
 	}
 
 	public static int? GetPersistedEndlessLoopCountFromSave(object save)
@@ -592,10 +614,23 @@ internal static class EndlessReflection
 			return null;
 		}
 		int value2 = (int)(SerializableExtraRunFieldsTestSubjectKills.GetValue(value) ?? throw new InvalidOperationException("SerializableExtraRunFields.TestSubjectKills returned null."));
-		int loopCount;
-		decimal hpScalePerChapter;
-		decimal damageScalePerChapter;
-		return TryDecodePersistedEndlessMetadata(value2, out loopCount, out hpScalePerChapter, out damageScalePerChapter) ? new int?(loopCount) : DecodePersistedEndlessLoopCount(value2);
+		if (TryDecodePersistedEndlessSettings(value2, out var settings))
+		{
+			return settings.LoopCount;
+		}
+		return DecodePersistedEndlessLoopCount(value2);
+	}
+
+	public static bool TryGetPersistedEndlessSettingsFromSave(object save, out EndlessScalingSettings settings)
+	{
+		settings = default;
+		object value = SerializableRunExtraFields.GetValue(save);
+		if (value == null)
+		{
+			return false;
+		}
+		int value2 = (int)(SerializableExtraRunFieldsTestSubjectKills.GetValue(value) ?? throw new InvalidOperationException("SerializableExtraRunFields.TestSubjectKills returned null."));
+		return TryDecodePersistedEndlessSettings(value2, out settings);
 	}
 
 	public static void SetPersistedEndlessLoopCountOnSave(object save, int loopCount)
@@ -611,13 +646,21 @@ internal static class EndlessReflection
 
 	public static void SetPersistedEndlessMetadataOnSave(object save, int loopCount, decimal hpScalePerChapter, decimal damageScalePerChapter)
 	{
+		EndlessScalingSettings settings = EndlessScalingSettings.FromConfig(loopCount);
+		settings.HpScale = hpScalePerChapter;
+		settings.DamageScale = damageScalePerChapter;
+		SetPersistedEndlessSettingsOnSave(save, settings);
+	}
+
+	public static void SetPersistedEndlessSettingsOnSave(object save, EndlessScalingSettings settings)
+	{
 		object obj = SerializableRunExtraFields.GetValue(save);
 		if (obj == null)
 		{
 			obj = Activator.CreateInstance(SerializableRunExtraFields.PropertyType) ?? throw new InvalidOperationException("Could not create SerializableExtraRunFields.");
 			SerializableRunExtraFields.SetValue(save, obj);
 		}
-		SerializableExtraRunFieldsTestSubjectKills.SetValue(obj, EncodePersistedEndlessMetadata(loopCount, hpScalePerChapter, damageScalePerChapter));
+		SerializableExtraRunFieldsTestSubjectKills.SetValue(obj, EncodePersistedEndlessSettings(settings));
 	}
 
 	private static int EncodePersistedEndlessLoopCount(int loopCount)
@@ -634,29 +677,174 @@ internal static class EndlessReflection
 		return Math.Max(0, -10000000 - value);
 	}
 
-	private static int EncodePersistedEndlessMetadata(int loopCount, decimal hpScalePerChapter, decimal damageScalePerChapter)
+	private const int V2Marker = 0x40000000;
+	private static readonly int[] FlatHpTable = new int[] { 0, 100, 250, 500, 750, 1000, 1500, 2000 };
+	private static readonly int[] FlatDmgTable = new int[] { 0, 1, 2, 3, 4, 5, 8, 10 };
+
+	private static int EncodePersistedEndlessSettings(EndlessScalingSettings settings)
 	{
-		int num = Math.Clamp(loopCount, 0, 63);
-		int num2 = EncodeScaleCode(hpScalePerChapter);
-		int num3 = EncodeScaleCode(damageScalePerChapter);
-		int num4 = (num << 24) | (num2 << 12) | num3;
-		return int.MinValue + num4;
+		int loop = Math.Clamp(settings.LoopCount, 0, 63);
+		int intervalCode = Math.Clamp((int)settings.Interval, 0, 2);
+		int curveCode = Math.Clamp((int)settings.Curve, 0, 2);
+		int skipChCode = settings.ScaleChapterOne ? 0 : 1;
+		int hpCode = EncodeHpScaleCode(settings.HpScale);
+		int dmgCode = EncodeDamageScaleCode(settings.DamageScale);
+		int flatHpCode = EncodeFlatHpCode(settings.FlatHp);
+		int flatDmgCode = EncodeFlatDmgCode(settings.FlatDmg);
+
+		int payload = V2Marker
+			| (flatDmgCode << 27)
+			| (flatHpCode << 24)
+			| (dmgCode << 18)
+			| (hpCode << 11)
+			| (skipChCode << 10)
+			| (curveCode << 8)
+			| (intervalCode << 6)
+			| loop;
+
+		return int.MinValue + payload;
 	}
 
-	private static bool TryDecodePersistedEndlessMetadata(int value, out int loopCount, out decimal hpScalePerChapter, out decimal damageScalePerChapter)
+	private static bool TryDecodePersistedEndlessSettings(int value, out EndlessScalingSettings settings)
 	{
-		loopCount = 0;
-		hpScalePerChapter = 0m;
-		damageScalePerChapter = 0m;
-		if (value > -1073741825)
+		settings = default;
+		if (value > -1)
 		{
 			return false;
 		}
-		int num = value - int.MinValue;
-		loopCount = num >> 24;
-		hpScalePerChapter = DecodeScaleCode((num >> 12) & 0xFFF);
-		damageScalePerChapter = DecodeScaleCode(num & 0xFFF);
-		return hpScalePerChapter >= 1m && damageScalePerChapter >= 1m;
+
+		int payload = value - int.MinValue;
+		if ((payload & V2Marker) != 0)
+		{
+			int loop = payload & 0x3F;
+			int intervalCode = (payload >> 6) & 0x3;
+			int curveCode = (payload >> 8) & 0x3;
+			int skipChCode = (payload >> 10) & 0x1;
+			int hpCode = (payload >> 11) & 0x7F;
+			int dmgCode = (payload >> 18) & 0x3F;
+			int flatHpCode = (payload >> 24) & 0x7;
+			int flatDmgCode = (payload >> 27) & 0x7;
+
+			settings = new EndlessScalingSettings
+			{
+				LoopCount = loop,
+				Interval = (ScalingInterval)Math.Clamp(intervalCode, 0, 2),
+				Curve = (ScalingCurve)Math.Clamp(curveCode, 0, 2),
+				ScaleChapterOne = (skipChCode == 0),
+				HpScale = DecodeHpScaleCode(hpCode),
+				DamageScale = DecodeDamageScaleCode(dmgCode),
+				FlatHp = DecodeFlatHpCode(flatHpCode),
+				FlatDmg = DecodeFlatDmgCode(flatDmgCode)
+			};
+			return settings.HpScale >= 1.0m && settings.DamageScale >= 1.0m;
+		}
+
+		// Backward-compatible V1 decoding
+		if (value <= -1073741825)
+		{
+			int loop = payload >> 24;
+			decimal hpScale = DecodeScaleCode((payload >> 12) & 0xFFF);
+			decimal dmgScale = DecodeScaleCode(payload & 0xFFF);
+			if (hpScale >= 1m && dmgScale >= 1m)
+			{
+				settings = new EndlessScalingSettings
+				{
+					LoopCount = loop,
+					Interval = EndlessConfig.Interval,
+					Curve = EndlessConfig.Curve,
+					ScaleChapterOne = EndlessConfig.ScaleChapterOne,
+					HpScale = hpScale,
+					DamageScale = dmgScale,
+					FlatHp = EndlessConfig.FlatHpPerStep,
+					FlatDmg = EndlessConfig.FlatDmgPerStep
+				};
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static int EncodeHpScaleCode(decimal scale)
+	{
+		decimal s = Math.Clamp(scale, 1.00m, 3.00m);
+		if (s <= 1.50m)
+		{
+			return Math.Clamp((int)Math.Round((s - 1.00m) * 100m, MidpointRounding.AwayFromZero), 0, 50);
+		}
+		return Math.Clamp(50 + (int)Math.Round((s - 1.50m) * 50m, MidpointRounding.AwayFromZero), 51, 125);
+	}
+
+	private static decimal DecodeHpScaleCode(int code)
+	{
+		if (code <= 50)
+		{
+			return 1.00m + (decimal)code * 0.01m;
+		}
+		return 1.50m + (decimal)(code - 50) * 0.02m;
+	}
+
+	private static int EncodeDamageScaleCode(decimal scale)
+	{
+		decimal s = Math.Clamp(scale, 1.00m, 2.50m);
+		if (s <= 1.30m)
+		{
+			return Math.Clamp((int)Math.Round((s - 1.00m) * 100m, MidpointRounding.AwayFromZero), 0, 30);
+		}
+		return Math.Clamp(30 + (int)Math.Round((s - 1.30m) * 25m, MidpointRounding.AwayFromZero), 31, 60);
+	}
+
+	private static decimal DecodeDamageScaleCode(int code)
+	{
+		if (code <= 30)
+		{
+			return 1.00m + (decimal)code * 0.01m;
+		}
+		return 1.30m + (decimal)(code - 30) * 0.04m;
+	}
+
+	private static int EncodeFlatHpCode(int flatHp)
+	{
+		int bestIndex = 0;
+		int bestDiff = Math.Abs(flatHp - FlatHpTable[0]);
+		for (int i = 1; i < FlatHpTable.Length; i++)
+		{
+			int diff = Math.Abs(flatHp - FlatHpTable[i]);
+			if (diff < bestDiff)
+			{
+				bestDiff = diff;
+				bestIndex = i;
+			}
+		}
+		return bestIndex;
+	}
+
+	private static int DecodeFlatHpCode(int code)
+	{
+		int index = Math.Clamp(code, 0, FlatHpTable.Length - 1);
+		return FlatHpTable[index];
+	}
+
+	private static int EncodeFlatDmgCode(int flatDmg)
+	{
+		int bestIndex = 0;
+		int bestDiff = Math.Abs(flatDmg - FlatDmgTable[0]);
+		for (int i = 1; i < FlatDmgTable.Length; i++)
+		{
+			int diff = Math.Abs(flatDmg - FlatDmgTable[i]);
+			if (diff < bestDiff)
+			{
+				bestDiff = diff;
+				bestIndex = i;
+			}
+		}
+		return bestIndex;
+	}
+
+	private static int DecodeFlatDmgCode(int code)
+	{
+		int index = Math.Clamp(code, 0, FlatDmgTable.Length - 1);
+		return FlatDmgTable[index];
 	}
 
 	private static int EncodeScaleCode(decimal scale)
@@ -1512,6 +1700,11 @@ internal static class EndlessReflection
 		return (from holder in enumerable.Cast<object>().OfType<Control>()
 			where GodotObject.IsInstanceValid((GodotObject)(object)holder)
 			select holder).ToList();
+	}
+
+	public static object? GetRelicInventoryHolderModel(object holder)
+	{
+		return NRelicInventoryHolderModel.GetValue(holder);
 	}
 
 	public static string GetRelicInventoryHolderAmountText(object holder)

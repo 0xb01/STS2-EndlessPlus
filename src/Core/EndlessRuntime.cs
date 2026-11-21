@@ -164,7 +164,7 @@ internal static class EndlessRuntime
 	/// </summary>
 	internal static decimal GetEnemyHpScalePerChapter(object runState)
 	{
-		return GetEnemyScalePerChapter(runState, useHpScale: true);
+		return GetActiveScalingSettings(runState).HpScale;
 	}
 
 	/// <summary>
@@ -172,29 +172,35 @@ internal static class EndlessRuntime
 	/// </summary>
 	internal static decimal GetEnemyDamageScalePerChapter(object runState)
 	{
-		return GetEnemyScalePerChapter(runState, useHpScale: false);
+		return GetActiveScalingSettings(runState).DamageScale;
 	}
 
-	private static decimal GetEnemyScalePerChapter(object runState, bool useHpScale)
+	/// <summary>
+	/// Returns the authoritative endless scaling settings for the run.
+	/// In multiplayer, reads host-synchronized metadata to avoid combat math divergence.
+	/// </summary>
+	public static EndlessScalingSettings GetActiveScalingSettings(object runState)
 	{
+		int completedLoops = GetCompletedLoops(runState);
 		if (EndlessReflection.GetPlayersCount(runState) <= 1)
 		{
-			return useHpScale ? EndlessConfig.EnemyHpScalingPerChapter : EndlessConfig.EnemyDamageScalingPerChapter;
+			return EndlessScalingSettings.FromConfig(completedLoops);
 		}
-		if (EndlessReflection.TryGetPersistedEndlessScaling(runState, out var loopCount, out var hpScalePerChapter, out var damageScalePerChapter))
+		if (EndlessReflection.TryGetPersistedEndlessSettings(runState, out var hostSettings))
 		{
-			WarnIfLocalScalingDiffers(loopCount, hpScalePerChapter, damageScalePerChapter);
-			return useHpScale ? hpScalePerChapter : damageScalePerChapter;
+			WarnIfLocalScalingDiffers(hostSettings);
+			return hostSettings;
 		}
 		if (TryGetRunManager(out object runManager) && EndlessReflection.IsLocalPlayerHost(runManager))
 		{
-			int num = EndlessReflection.GetPersistedEndlessLoopCount(runState) ?? GetCompletedLoops(runState);
-			EndlessReflection.SetPersistedEndlessMetadata(runState, num, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-			EndlessLog.Info($"Migrated missing multiplayer scaling metadata from host config during scaling lookup: loop={num}, hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
-			return useHpScale ? EndlessConfig.EnemyHpScalingPerChapter : EndlessConfig.EnemyDamageScalingPerChapter;
+			int num = EndlessReflection.GetPersistedEndlessLoopCount(runState) ?? completedLoops;
+			EndlessScalingSettings hostConfig = EndlessScalingSettings.FromConfig(num);
+			EndlessReflection.SetPersistedEndlessSettings(runState, hostConfig);
+			EndlessLog.Info($"Migrated missing multiplayer scaling metadata from host config: loop={num}, interval={hostConfig.Interval}, curve={hostConfig.Curve}, skip_ch={!hostConfig.ScaleChapterOne}, hp_scale={hostConfig.HpScale:0.###}, dmg_scale={hostConfig.DamageScale:0.###}, flat_hp={hostConfig.FlatHp}, flat_dmg={hostConfig.FlatDmg}.");
+			return hostConfig;
 		}
-		WarnOnce("missing-scaling-metadata", "WARNING: Multiplayer endless scaling metadata is missing from the run state. " + $"Using local config hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}. " + "All players must use the same local config until host scaling metadata is available, or the run can diverge.");
-		return useHpScale ? EndlessConfig.EnemyHpScalingPerChapter : EndlessConfig.EnemyDamageScalingPerChapter;
+		WarnOnce("missing-scaling-metadata", "WARNING: Multiplayer endless scaling metadata is missing from the run state. Using local config as fallback.");
+		return EndlessScalingSettings.FromConfig(completedLoops);
 	}
 
 	private static bool TryGetRunManager(out object runManager)
@@ -211,11 +217,21 @@ internal static class EndlessRuntime
 		}
 	}
 
-	private static void WarnIfLocalScalingDiffers(int loopCount, decimal hostHpScale, decimal hostDamageScale)
+	private static void WarnIfLocalScalingDiffers(EndlessScalingSettings hostSettings)
 	{
-		if (!(hostHpScale == EndlessConfig.EnemyHpScalingPerChapter) || !(hostDamageScale == EndlessConfig.EnemyDamageScalingPerChapter))
+		bool mismatch = hostSettings.HpScale != EndlessConfig.EnemyHpScalingPerChapter
+			|| hostSettings.DamageScale != EndlessConfig.EnemyDamageScalingPerChapter
+			|| hostSettings.Interval != EndlessConfig.Interval
+			|| hostSettings.Curve != EndlessConfig.Curve
+			|| hostSettings.ScaleChapterOne != EndlessConfig.ScaleChapterOne
+			|| hostSettings.FlatHp != EndlessConfig.FlatHpPerStep
+			|| hostSettings.FlatDmg != EndlessConfig.FlatDmgPerStep;
+
+		if (mismatch)
 		{
-			WarnOnce($"scaling-mismatch:{loopCount}:{hostHpScale:0.###}:{hostDamageScale:0.###}", "WARNING: Local endless config differs from multiplayer run scaling. " + $"Using run/host scaling hp_scale={hostHpScale:0.###}, dmg_scale={hostDamageScale:0.###}; " + $"local config is hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
+			WarnOnce($"scaling-mismatch:{hostSettings.LoopCount}:{hostSettings.HpScale:0.###}:{hostSettings.DamageScale:0.###}:{hostSettings.Interval}:{hostSettings.Curve}",
+				$"WARNING: Local endless config differs from multiplayer host settings. " +
+				$"Using host settings: interval={hostSettings.Interval}, curve={hostSettings.Curve}, skip_ch={!hostSettings.ScaleChapterOne}, hp_scale={hostSettings.HpScale:0.###}, dmg_scale={hostSettings.DamageScale:0.###}, flat_hp={hostSettings.FlatHp}, flat_dmg={hostSettings.FlatDmg}.");
 		}
 	}
 
@@ -385,38 +401,37 @@ internal static class EndlessRuntime
 
 	private static void PersistEndlessMetadata(object runManager, object runState, int loopCount)
 	{
-		int loopCount2;
-		decimal hpScalePerChapter;
-		decimal damageScalePerChapter;
 		if (ShouldWriteAuthoritativeScaling(runManager, runState))
 		{
-			EndlessReflection.SetPersistedEndlessMetadata(runState, loopCount, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-			EndlessLog.Info($"Persisted endless multiplayer scaling metadata: loop={loopCount}, hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
+			EndlessScalingSettings settings = EndlessScalingSettings.FromConfig(loopCount);
+			EndlessReflection.SetPersistedEndlessSettings(runState, settings);
+			EndlessLog.Info($"Persisted endless multiplayer scaling metadata: loop={loopCount}, interval={settings.Interval}, curve={settings.Curve}, skip_ch={!settings.ScaleChapterOne}, hp_scale={settings.HpScale:0.###}, dmg_scale={settings.DamageScale:0.###}, flat_hp={settings.FlatHp}, flat_dmg={settings.FlatDmg}.");
 		}
-		else if (EndlessReflection.TryGetPersistedEndlessScaling(runState, out loopCount2, out hpScalePerChapter, out damageScalePerChapter))
+		else if (EndlessReflection.TryGetPersistedEndlessSettings(runState, out var hostSettings))
 		{
-			EndlessReflection.SetPersistedEndlessMetadata(runState, loopCount, hpScalePerChapter, damageScalePerChapter);
-			EndlessLog.Info($"Preserved host endless scaling metadata on multiplayer client: loop={loopCount}, hp_scale={hpScalePerChapter:0.###}, dmg_scale={damageScalePerChapter:0.###}.");
+			hostSettings.LoopCount = loopCount;
+			EndlessReflection.SetPersistedEndlessSettings(runState, hostSettings);
+			EndlessLog.Info($"Preserved host endless scaling metadata on multiplayer client: loop={loopCount}, hp_scale={hostSettings.HpScale:0.###}, dmg_scale={hostSettings.DamageScale:0.###}.");
 		}
 		else
 		{
-			EndlessReflection.SetPersistedEndlessMetadata(runState, loopCount, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-			EndlessLog.Info($"Initialized client endless metadata fallback: loop={loopCount}, hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
+			EndlessScalingSettings fallback = EndlessScalingSettings.FromConfig(loopCount);
+			EndlessReflection.SetPersistedEndlessSettings(runState, fallback);
+			EndlessLog.Info($"Initialized client endless metadata fallback: loop={loopCount}, hp_scale={fallback.HpScale:0.###}, dmg_scale={fallback.DamageScale:0.###}.");
 		}
 	}
 
 	private static void PersistEndlessMetadataOnSave(object runManager, object runState, object save, int loopCount)
 	{
-		int loopCount2;
-		decimal hpScalePerChapter;
-		decimal damageScalePerChapter;
 		if (ShouldWriteAuthoritativeScaling(runManager, runState))
 		{
-			EndlessReflection.SetPersistedEndlessMetadataOnSave(save, loopCount, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
+			EndlessScalingSettings settings = EndlessScalingSettings.FromConfig(loopCount);
+			EndlessReflection.SetPersistedEndlessSettingsOnSave(save, settings);
 		}
-		else if (EndlessReflection.TryGetPersistedEndlessScaling(runState, out loopCount2, out hpScalePerChapter, out damageScalePerChapter))
+		else if (EndlessReflection.TryGetPersistedEndlessSettings(runState, out var hostSettings))
 		{
-			EndlessReflection.SetPersistedEndlessMetadataOnSave(save, loopCount, hpScalePerChapter, damageScalePerChapter);
+			hostSettings.LoopCount = loopCount;
+			EndlessReflection.SetPersistedEndlessSettingsOnSave(save, hostSettings);
 		}
 		else
 		{

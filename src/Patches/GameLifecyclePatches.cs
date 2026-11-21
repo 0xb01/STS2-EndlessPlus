@@ -70,7 +70,7 @@ internal static class GameLifecyclePatches
 
 	private static void MigrateLoadedMultiplayerScalingMetadata(object runManager, object runState, bool requireHost, string source)
 	{
-		if (EndlessReflection.GetPlayersCount(runState) > 1 && !EndlessReflection.TryGetPersistedEndlessScaling(runState, out var _, out var _, out var _))
+		if (EndlessReflection.GetPlayersCount(runState) > 1 && !EndlessReflection.TryGetPersistedEndlessSettings(runState, out var _))
 		{
 			if (requireHost && !EndlessReflection.IsLocalPlayerHost(runManager))
 			{
@@ -78,8 +78,9 @@ internal static class GameLifecyclePatches
 				return;
 			}
 			int valueOrDefault = EndlessReflection.GetPersistedEndlessLoopCount(runState).GetValueOrDefault();
-			EndlessReflection.SetPersistedEndlessMetadata(runState, valueOrDefault, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-			EndlessLog.Info($"Migrated older multiplayer endless save to host scaling metadata {source}: loop={valueOrDefault}, hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
+			EndlessScalingSettings hostConfig = EndlessScalingSettings.FromConfig(valueOrDefault);
+			EndlessReflection.SetPersistedEndlessSettings(runState, hostConfig);
+			EndlessLog.Info($"Migrated older multiplayer endless save to host scaling metadata {source}: loop={valueOrDefault}, interval={hostConfig.Interval}, curve={hostConfig.Curve}, hp_scale={hostConfig.HpScale:0.###}, dmg_scale={hostConfig.DamageScale:0.###}.");
 		}
 	}
 
@@ -88,10 +89,11 @@ internal static class GameLifecyclePatches
 		if (EndlessReflection.GetPlayersCount(runState) > 1)
 		{
 			int valueOrDefault = EndlessReflection.GetPersistedEndlessLoopCount(runState).GetValueOrDefault();
-			if (EndlessReflection.TryGetPersistedEndlessScaling(runState, out var _, out var hpScalePerChapter, out var damageScalePerChapter))
+			if (EndlessReflection.TryGetPersistedEndlessSettings(runState, out var settings))
 			{
-				EndlessReflection.SetPersistedEndlessMetadataOnSave(save, valueOrDefault, hpScalePerChapter, damageScalePerChapter);
-				EndlessLog.Info($"Persisted existing endless multiplayer scaling metadata into save via {source}: loop={valueOrDefault}, hp_scale={hpScalePerChapter:0.###}, dmg_scale={damageScalePerChapter:0.###}.");
+				settings.LoopCount = valueOrDefault;
+				EndlessReflection.SetPersistedEndlessSettingsOnSave(save, settings);
+				EndlessLog.Info($"Persisted existing endless multiplayer scaling metadata into save via {source}: loop={valueOrDefault}, hp_scale={settings.HpScale:0.###}, dmg_scale={settings.DamageScale:0.###}.");
 			}
 			else if (!EndlessReflection.IsLocalPlayerHost(runManager))
 			{
@@ -100,9 +102,10 @@ internal static class GameLifecyclePatches
 			}
 			else
 			{
-				EndlessReflection.SetPersistedEndlessMetadata(runState, valueOrDefault, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-				EndlessReflection.SetPersistedEndlessMetadataOnSave(save, valueOrDefault, EndlessConfig.EnemyHpScalingPerChapter, EndlessConfig.EnemyDamageScalingPerChapter);
-				EndlessLog.Info($"Persisted host endless multiplayer scaling metadata into save via {source}: loop={valueOrDefault}, hp_scale={EndlessConfig.EnemyHpScalingPerChapter:0.###}, dmg_scale={EndlessConfig.EnemyDamageScalingPerChapter:0.###}.");
+				EndlessScalingSettings hostConfig = EndlessScalingSettings.FromConfig(valueOrDefault);
+				EndlessReflection.SetPersistedEndlessSettings(runState, hostConfig);
+				EndlessReflection.SetPersistedEndlessSettingsOnSave(save, hostConfig);
+				EndlessLog.Info($"Persisted host endless multiplayer scaling metadata into save via {source}: loop={valueOrDefault}, interval={hostConfig.Interval}, curve={hostConfig.Curve}, hp_scale={hostConfig.HpScale:0.###}, dmg_scale={hostConfig.DamageScale:0.###}.");
 			}
 		}
 	}

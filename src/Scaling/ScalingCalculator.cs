@@ -6,11 +6,12 @@ namespace BNKZ.STS2.EndlessPlus;
 /// <summary>
 /// Core mathematical calculation engine for monster stat scaling in Endless Mode.
 /// Evaluates scaling steps across Act, Chapter, or Floor intervals and applies Exponential, Linear, or Fixed curves.
+/// Uses host-synchronized settings in multiplayer to ensure deterministic combat across peers.
 /// </summary>
 internal static class ScalingCalculator
 {
 	/// <summary>
-	/// Computes the number of scaling progression steps elapsed based on current run state and configured interval.
+	/// Computes the number of scaling progression steps elapsed based on current run state and active interval.
 	/// Honors Chapter 1 protection (vanilla 1.0x difficulty) when SkipChapterOne is active.
 	/// </summary>
 	/// <param name="runState">Current active run state object.</param>
@@ -18,11 +19,19 @@ internal static class ScalingCalculator
 	public static int CalculateSteps(object runState)
 	{
 		EndlessConfig.CheckReload();
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		return CalculateSteps(runState, settings);
+	}
 
-		int completedLoops = EndlessRuntime.GetCompletedLoops(runState);
+	/// <summary>
+	/// Computes scaling steps using specified scaling settings (host-authoritative in multiplayer).
+	/// </summary>
+	public static int CalculateSteps(object runState, EndlessScalingSettings settings)
+	{
+		int completedLoops = settings.LoopCount;
 
 		// Chapter 1 protection: if scale_chapter_1 is false, loop 0 never scales
-		if (!EndlessConfig.ScaleChapterOne && completedLoops <= 0)
+		if (!settings.ScaleChapterOne && completedLoops <= 0)
 		{
 			return 0;
 		}
@@ -39,17 +48,17 @@ internal static class ScalingCalculator
 			currentActIndex = Math.Max(0, EndlessReflection.GetCurrentActIndex(runState));
 		}
 
-		switch (EndlessConfig.Interval)
+		switch (settings.Interval)
 		{
 			case ScalingInterval.Act:
-				if (!EndlessConfig.ScaleChapterOne)
+				if (!settings.ScaleChapterOne)
 				{
 					return (completedLoops - 1) * actsPerLoop + currentActIndex + 1;
 				}
 				return completedLoops * actsPerLoop + currentActIndex;
 
 			case ScalingInterval.Chapter:
-				if (!EndlessConfig.ScaleChapterOne)
+				if (!settings.ScaleChapterOne)
 				{
 					return Math.Max(0, completedLoops);
 				}
@@ -57,7 +66,7 @@ internal static class ScalingCalculator
 
 			case ScalingInterval.Floor:
 				int totalFloor = Math.Max(0, EndlessReflection.GetTotalFloor(runState));
-				if (!EndlessConfig.ScaleChapterOne)
+				if (!settings.ScaleChapterOne)
 				{
 					int loopZeroFloors = actsPerLoop * 16;
 					return Math.Max(0, totalFloor - loopZeroFloors);
@@ -77,13 +86,13 @@ internal static class ScalingCalculator
 	/// <returns>Decimal multiplier to scale enemy maximum HP (e.g. 1.25m = +25% HP).</returns>
 	public static decimal GetHpMultiplier(object runState)
 	{
-		int steps = CalculateSteps(runState);
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int steps = CalculateSteps(runState, settings);
 		if (steps <= 0)
 		{
 			return 1m;
 		}
-		decimal scale = EndlessRuntime.GetEnemyHpScalePerChapter(runState);
-		return ComputeMultiplier(scale, steps, EndlessConfig.MinHpMultiplier, EndlessConfig.MaxHpMultiplier);
+		return ComputeMultiplier(settings.HpScale, steps, settings.Curve, EndlessConfig.MinHpMultiplier, EndlessConfig.MaxHpMultiplier);
 	}
 
 	/// <summary>
@@ -94,13 +103,13 @@ internal static class ScalingCalculator
 	/// <returns>Decimal multiplier to scale enemy outgoing attack damage (e.g. 1.15m = +15% DMG).</returns>
 	public static decimal GetDamageMultiplier(object runState)
 	{
-		int steps = CalculateSteps(runState);
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int steps = CalculateSteps(runState, settings);
 		if (steps <= 0)
 		{
 			return 1m;
 		}
-		decimal scale = EndlessRuntime.GetEnemyDamageScalePerChapter(runState);
-		return ComputeMultiplier(scale, steps, EndlessConfig.MinDmgMultiplier, EndlessConfig.MaxDmgMultiplier);
+		return ComputeMultiplier(settings.DamageScale, steps, settings.Curve, EndlessConfig.MinDmgMultiplier, EndlessConfig.MaxDmgMultiplier);
 	}
 
 	/// <summary>
@@ -110,12 +119,13 @@ internal static class ScalingCalculator
 	/// <returns>Integer flat HP bonus to append to enemy maximum HP.</returns>
 	public static int GetFlatHpBonus(object runState)
 	{
-		if (EndlessConfig.FlatHpPerStep <= 0)
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		if (settings.FlatHp <= 0)
 		{
 			return 0;
 		}
-		int steps = CalculateSteps(runState);
-		return steps > 0 ? EndlessConfig.FlatHpPerStep * steps : 0;
+		int steps = CalculateSteps(runState, settings);
+		return steps > 0 ? settings.FlatHp * steps : 0;
 	}
 
 	/// <summary>
@@ -125,12 +135,13 @@ internal static class ScalingCalculator
 	/// <returns>Integer flat damage bonus to append to monster attack commands.</returns>
 	public static int GetFlatDamageBonus(object runState)
 	{
-		if (EndlessConfig.FlatDmgPerStep <= 0)
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		if (settings.FlatDmg <= 0)
 		{
 			return 0;
 		}
-		int steps = CalculateSteps(runState);
-		return steps > 0 ? EndlessConfig.FlatDmgPerStep * steps : 0;
+		int steps = CalculateSteps(runState, settings);
+		return steps > 0 ? settings.FlatDmg * steps : 0;
 	}
 
 	/// <summary>
@@ -140,10 +151,11 @@ internal static class ScalingCalculator
 	/// <returns>Formatted status string suitable for top HUD banner overlay.</returns>
 	public static string FormatStatusText(object runState)
 	{
-		int completedLoops = EndlessRuntime.GetCompletedLoops(runState);
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int completedLoops = settings.LoopCount;
 		int chapter = completedLoops + 1;
 		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
-		int steps = CalculateSteps(runState);
+		int steps = CalculateSteps(runState, settings);
 		string prefix = completedLoops > 0 ? "Endless: " : "";
 
 		if (steps <= 0)
@@ -171,23 +183,24 @@ internal static class ScalingCalculator
 	/// </summary>
 	/// <param name="baseScale">Base factor configured per chapter or step (e.g. 1.08).</param>
 	/// <param name="steps">Total scaling steps accumulated.</param>
+	/// <param name="curve">Scaling curve algorithm.</param>
 	/// <param name="minMult">Minimum allowed multiplier floor.</param>
 	/// <param name="maxMult">Maximum allowed multiplier ceiling (0 or negative means unconstrained).</param>
 	/// <returns>Resulting multiplier clamped within [minMult, maxMult].</returns>
-	private static decimal ComputeMultiplier(decimal baseScale, int steps, decimal minMult, decimal maxMult)
+	private static decimal ComputeMultiplier(decimal baseScale, int steps, ScalingCurve curve, decimal minMult, decimal maxMult)
 	{
 		if (steps <= 0)
 		{
 			return 1m;
 		}
 
-		if (EndlessConfig.Curve == ScalingCurve.Fixed)
+		if (curve == ScalingCurve.Fixed)
 		{
 			return Clamp(baseScale, minMult, maxMult);
 		}
 
 		decimal result;
-		if (EndlessConfig.Curve == ScalingCurve.Linear)
+		if (curve == ScalingCurve.Linear)
 		{
 			result = 1m + (baseScale - 1m) * (decimal)steps;
 		}

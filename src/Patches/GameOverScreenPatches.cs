@@ -537,11 +537,31 @@ internal static class GameOverScreenPatches
 
 	private static string GetEndlessButtonText(object? runManager, object? runState)
 	{
+		if (runManager != null && runState != null)
+		{
+			int playersCount = EndlessReflection.GetPlayersCount(runState);
+			if (playersCount > 1 && EndlessReflection.TryGetReadyPlayerCount(runManager, out var readyCount))
+			{
+				return $"Endless ({readyCount}/{playersCount} Ready)";
+			}
+		}
 		return "Endless";
 	}
 
 	private static string GetEndlessButtonTooltip(object? runManager, object? runState)
 	{
+		if (runManager != null && runState != null)
+		{
+			int playersCount = EndlessReflection.GetPlayersCount(runState);
+			if (playersCount > 1)
+			{
+				if (EndlessReflection.TryGetReadyPlayerCount(runManager, out var readyCount))
+				{
+					return $"Endless Mode: {readyCount}/{playersCount} players ready to start the next loop.";
+				}
+				return $"Endless Mode: waiting for {playersCount} players.";
+			}
+		}
 		return "Start the next endless loop";
 	}
 

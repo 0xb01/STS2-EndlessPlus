@@ -263,6 +263,10 @@ internal static class EndlessConfig
 		int ascensionPerLoop,
 		int maxAscension,
 		bool overrideHud,
+		decimal minHpMultiplier,
+		decimal maxHpMultiplier,
+		decimal minDmgMultiplier,
+		decimal maxDmgMultiplier,
 		bool saveToFile)
 	{
 		Interval = interval;
@@ -275,13 +279,33 @@ internal static class EndlessConfig
 		AscensionPerLoop = ascensionPerLoop;
 		MaxAscension = Math.Clamp(maxAscension, 0, 50);
 		OverrideHud = overrideHud;
+		MinHpMultiplier = Math.Max(0m, minHpMultiplier);
+		MaxHpMultiplier = Math.Max(0m, maxHpMultiplier);
+		MinDmgMultiplier = Math.Max(0m, minDmgMultiplier);
+		MaxDmgMultiplier = Math.Max(0m, maxDmgMultiplier);
 
-		EndlessLog.Info($"Applied endless config from GUI: interval={Interval}, curve={Curve}, hp_scale={EnemyHpScalingPerChapter:0.###}, dmg_scale={EnemyDamageScalingPerChapter:0.###}, flat_hp={FlatHpPerStep}, flat_dmg={FlatDmgPerStep}, skip_chapter={!ScaleChapterOne}.");
+		EndlessLog.Info($"Applied endless config from GUI: interval={Interval}, curve={Curve}, hp_scale={EnemyHpScalingPerChapter:0.###}, dmg_scale={EnemyDamageScalingPerChapter:0.###}, flat_hp={FlatHpPerStep}, flat_dmg={FlatDmgPerStep}, skip_chapter={!ScaleChapterOne}, min_hp={MinHpMultiplier:0.#}, max_hp={MaxHpMultiplier:0.#}, min_dmg={MinDmgMultiplier:0.#}, max_dmg={MaxDmgMultiplier:0.#}.");
 
 		if (saveToFile)
 		{
 			SaveToConfigFile();
 		}
+	}
+
+	public static void ApplySettings(
+		ScalingInterval interval,
+		bool skipChapterOne,
+		ScalingCurve curve,
+		decimal hpScale,
+		decimal dmgScale,
+		int flatHp,
+		int flatDmg,
+		int ascensionPerLoop,
+		int maxAscension,
+		bool overrideHud,
+		bool saveToFile)
+	{
+		ApplySettings(interval, skipChapterOne, curve, hpScale, dmgScale, flatHp, flatDmg, ascensionPerLoop, maxAscension, overrideHud, MinHpMultiplier, MaxHpMultiplier, MinDmgMultiplier, MaxDmgMultiplier, saveToFile);
 	}
 
 	/// <summary>
@@ -333,6 +357,18 @@ internal static class EndlessConfig
 						break;
 					case "flat_dmg_per_step":
 						lines[i] = $"flat_dmg_per_step {FlatDmgPerStep}";
+						break;
+					case "min_hp_multiplier":
+						lines[i] = $"min_hp_multiplier {MinHpMultiplier.ToString("0.0", CultureInfo.InvariantCulture)}";
+						break;
+					case "max_hp_multiplier":
+						lines[i] = $"max_hp_multiplier {MaxHpMultiplier.ToString("0.0", CultureInfo.InvariantCulture)}";
+						break;
+					case "min_dmg_multiplier":
+						lines[i] = $"min_dmg_multiplier {MinDmgMultiplier.ToString("0.0", CultureInfo.InvariantCulture)}";
+						break;
+					case "max_dmg_multiplier":
+						lines[i] = $"max_dmg_multiplier {MaxDmgMultiplier.ToString("0.0", CultureInfo.InvariantCulture)}";
 						break;
 					case "ascension_per_loop":
 						lines[i] = $"ascension_per_loop {AscensionPerLoop}";

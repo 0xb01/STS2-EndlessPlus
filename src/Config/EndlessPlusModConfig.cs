@@ -33,6 +33,19 @@ public class EndlessPlusModConfig : SimpleModConfig
 	[ConfigSlider(1.0, 2.5, 0.01, Format = "{0:0.00}x")]
 	public static float DamageMultiplier { get; set; } = 1.05f;
 
+	[ConfigSection("Multiplier Clamps & Limits")]
+	[ConfigSlider(0.0, 5.0, 0.1, Format = "{0:0.0}x")]
+	public static float MinHpMultiplier { get; set; } = 1.0f;
+
+	[ConfigSlider(0.0, 50.0, 0.5, Format = "{0:0.0}x")]
+	public static float MaxHpMultiplier { get; set; } = 0.0f;
+
+	[ConfigSlider(0.0, 5.0, 0.1, Format = "{0:0.0}x")]
+	public static float MinDamageMultiplier { get; set; } = 1.0f;
+
+	[ConfigSlider(0.0, 50.0, 0.5, Format = "{0:0.0}x")]
+	public static float MaxDamageMultiplier { get; set; } = 0.0f;
+
 	[ConfigSection("Flat Stat Bonuses (Per Step)")]
 	[ConfigSlider(0, 5000, 25, Format = "+{0} HP")]
 	public static int FlatHpPerStep { get; set; } = 500;
@@ -101,6 +114,10 @@ public class EndlessPlusModConfig : SimpleModConfig
 				AscensionPerLoop,
 				MaxAscension,
 				OverrideHud,
+				(decimal)MinHpMultiplier,
+				(decimal)MaxHpMultiplier,
+				(decimal)MinDamageMultiplier,
+				(decimal)MaxDamageMultiplier,
 				saveToFile: saveToFile
 			);
 		}
@@ -125,6 +142,10 @@ public class EndlessPlusModConfig : SimpleModConfig
 			DamageMultiplier = (float)EndlessConfig.EnemyDamageScalingPerChapter;
 			FlatHpPerStep = EndlessConfig.FlatHpPerStep;
 			FlatDamagePerStep = EndlessConfig.FlatDmgPerStep;
+			MinHpMultiplier = (float)EndlessConfig.MinHpMultiplier;
+			MaxHpMultiplier = (float)EndlessConfig.MaxHpMultiplier;
+			MinDamageMultiplier = (float)EndlessConfig.MinDmgMultiplier;
+			MaxDamageMultiplier = (float)EndlessConfig.MaxDmgMultiplier;
 			AscensionPerLoop = EndlessConfig.AscensionPerLoop;
 			MaxAscension = EndlessConfig.MaxAscension;
 			OverrideHud = EndlessConfig.OverrideHud;
@@ -158,6 +179,14 @@ public class EndlessPlusModConfig : SimpleModConfig
 				{ "BNKZ-HP_MULTIPLIER.hover.desc", "Monster Max HP percentage multiplier per step (e.g. 1.08 = +8% HP per step)." },
 				{ "BNKZ-DAMAGE_MULTIPLIER.title", "Enemy Damage Multiplier" },
 				{ "BNKZ-DAMAGE_MULTIPLIER.hover.desc", "Monster Attack Damage percentage multiplier per step (e.g. 1.05 = +5% DMG per step)." },
+				{ "BNKZ-MIN_HP_MULTIPLIER.title", "Min HP Multiplier" },
+				{ "BNKZ-MIN_HP_MULTIPLIER.hover.desc", "Minimum enemy HP multiplier floor (default 1.0x)." },
+				{ "BNKZ-MAX_HP_MULTIPLIER.title", "Max HP Multiplier" },
+				{ "BNKZ-MAX_HP_MULTIPLIER.hover.desc", "Maximum ceiling for enemy HP multiplier. Set to 0.0 for uncapped (infinite) scaling." },
+				{ "BNKZ-MIN_DAMAGE_MULTIPLIER.title", "Min Damage Multiplier" },
+				{ "BNKZ-MIN_DAMAGE_MULTIPLIER.hover.desc", "Minimum enemy attack damage multiplier floor (default 1.0x)." },
+				{ "BNKZ-MAX_DAMAGE_MULTIPLIER.title", "Max Damage Multiplier" },
+				{ "BNKZ-MAX_DAMAGE_MULTIPLIER.hover.desc", "Maximum ceiling for enemy damage multiplier. Set to 0.0 for uncapped (infinite) scaling." },
 				{ "BNKZ-FLAT_HP_PER_STEP.title", "Flat HP Bonus Per Step" },
 				{ "BNKZ-FLAT_HP_PER_STEP.hover.desc", "Flat monster HP added per step after multiplier. Useful for scaling in multiplayer parties (e.g. 500)." },
 				{ "BNKZ-FLAT_DAMAGE_PER_STEP.title", "Flat Damage Bonus Per Step" },

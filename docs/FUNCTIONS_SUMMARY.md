@@ -52,6 +52,7 @@ src/
 │   ├── EndlessLog.cs
 │   ├── EndlessReflection.cs
 │   ├── EndlessRuntime.cs
+│   ├── EndlessScalingSettings.cs
 │   └── LinuxNativeBootstrap.cs
 ├── Patches/              # Harmony runtime method interceptors
 │   ├── CombatRoomPatches.cs

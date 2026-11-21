@@ -19,6 +19,22 @@ internal static class RunUiPatches
 
 	private static bool _showSingleRelicRowOnly;
 
+	private static int _relicRowScrollOffset;
+
+	private const string NewBadgeName = "BNKZNewRelicBadge";
+
+	private const double NewBadgeDurationSeconds = 10.0;
+
+	private static readonly Dictionary<object, DateTime> _newRelics = new();
+
+	public static void RecordNewRelic(object relic)
+	{
+		lock (_newRelics)
+		{
+			_newRelics[relic] = DateTime.UtcNow;
+		}
+	}
+
 	public static void AfterReady(object __instance)
 	{
 		Control val = (Control)((__instance is Control) ? __instance : null);
@@ -167,7 +183,9 @@ internal static class RunUiPatches
 			val3 = EnsureRelicToggleButton(val);
 			RefreshRelicCounterDisplays(val);
 			SortRelicInventory(val);
-			ApplyRelicVisibilityMode(val, _showSingleRelicRowOnly);
+			UpdateRelicNewBadges(val);
+			EnsureRelicInputHooks(val, val3);
+			ApplyRelicVisibilityMode(val);
 			UpdateRelicToggleButton(val3, val);
 		}
 		catch (Exception ex)
@@ -188,17 +206,146 @@ internal static class RunUiPatches
 		}
 	}
 
+	private static void UpdateRelicNewBadges(Control inventory)
+	{
+		DateTime now = DateTime.UtcNow;
+		IReadOnlyList<Control> holders = EndlessReflection.GetRelicInventoryHolders(inventory);
+		foreach (Control holder in holders)
+		{
+			object? model = EndlessReflection.GetRelicInventoryHolderModel(holder);
+			bool isNew = false;
+			double remaining = 0;
+			if (model != null)
+			{
+				lock (_newRelics)
+				{
+					if (_newRelics.TryGetValue(model, out DateTime acquiredAt))
+					{
+						double elapsed = (now - acquiredAt).TotalSeconds;
+						if (elapsed < NewBadgeDurationSeconds)
+						{
+							isNew = true;
+							remaining = NewBadgeDurationSeconds - elapsed;
+						}
+					}
+				}
+			}
+
+			Node? existingBadge = FindChild((Node)(object)holder, NewBadgeName);
+			if (isNew)
+			{
+				Label badge = (Label)(object)((existingBadge is Label) ? existingBadge : null);
+				if (badge == null)
+				{
+					badge = new Label
+					{
+						Name = (StringName)NewBadgeName,
+						Text = "NEW",
+						MouseFilter = Control.MouseFilterEnum.Ignore,
+						HorizontalAlignment = HorizontalAlignment.Center,
+						VerticalAlignment = VerticalAlignment.Center
+					};
+					badge.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+					badge.OffsetLeft = -28f;
+					badge.OffsetTop = 0f;
+					badge.OffsetRight = 2f;
+					badge.OffsetBottom = 16f;
+					((Control)badge).AddThemeFontSizeOverride((StringName)("font_size"), 10);
+					((Control)badge).AddThemeColorOverride((StringName)("font_color"), new Color(1f, 0.88f, 0.2f, 1f));
+					((Control)badge).AddThemeColorOverride((StringName)("font_outline_color"), new Color(0f, 0f, 0f, 1f));
+					((Control)badge).AddThemeConstantOverride((StringName)("outline_size"), 4);
+					((Node)holder).AddChild((Node)(object)badge, false, (Node.InternalMode)0);
+				}
+
+				float alpha = remaining < 2.0 ? Math.Clamp((float)(remaining / 2.0), 0.1f, 1.0f) : 1.0f;
+				((CanvasItem)badge).Modulate = new Color(1f, 1f, 1f, alpha);
+			}
+			else if (existingBadge != null)
+			{
+				((Node)holder).RemoveChild(existingBadge);
+				existingBadge.QueueFree();
+			}
+		}
+
+		lock (_newRelics)
+		{
+			List<object>? toRemove = null;
+			foreach (KeyValuePair<object, DateTime> kv in _newRelics)
+			{
+				if ((now - kv.Value).TotalSeconds >= NewBadgeDurationSeconds + 5.0)
+				{
+					toRemove ??= new List<object>();
+					toRemove.Add(kv.Key);
+				}
+			}
+			if (toRemove != null)
+			{
+				foreach (object key in toRemove)
+				{
+					_newRelics.Remove(key);
+				}
+			}
+		}
+	}
+
+	private static void EnsureRelicInputHooks(Control inventory, Button button)
+	{
+		if (!inventory.HasMeta("BNKZInputHooked"))
+		{
+			inventory.SetMeta("BNKZInputHooked", true);
+			inventory.GuiInput += (@event) => HandleRelicGuiInput(@event, inventory);
+		}
+		if (!button.HasMeta("BNKZInputHooked"))
+		{
+			button.SetMeta("BNKZInputHooked", true);
+			button.GuiInput += (@event) => HandleRelicGuiInput(@event, inventory);
+		}
+		IReadOnlyList<Control> holders = EndlessReflection.GetRelicInventoryHolders(inventory);
+		foreach (Control holder in holders)
+		{
+			if (!holder.HasMeta("BNKZInputHooked"))
+			{
+				holder.SetMeta("BNKZInputHooked", true);
+				holder.GuiInput += (@event) => HandleRelicGuiInput(@event, inventory);
+			}
+		}
+	}
+
+	private static void HandleRelicGuiInput(InputEvent @event, Control inventory)
+	{
+		if (@event is InputEventMouseButton mb && mb.Pressed)
+		{
+			IReadOnlyList<Control> holders = EndlessReflection.GetRelicInventoryHolders(inventory);
+			int rowCapacity = GetFirstRelicRowCount(inventory, holders);
+			int totalRows = (holders.Count + rowCapacity - 1) / rowCapacity;
+			int maxVisibleRows = _showSingleRelicRowOnly ? 1 : 3;
+			int maxOffset = Math.Max(0, totalRows - maxVisibleRows);
+
+			if (mb.ButtonIndex == MouseButton.WheelUp)
+			{
+				if (_relicRowScrollOffset > 0)
+				{
+					_relicRowScrollOffset--;
+					Control topmost = GetTopmostControl(inventory);
+					if (topmost != null) RefreshRelicInventoryUi(topmost);
+				}
+				inventory.AcceptEvent();
+			}
+			else if (mb.ButtonIndex == MouseButton.WheelDown)
+			{
+				if (_relicRowScrollOffset < maxOffset)
+				{
+					_relicRowScrollOffset++;
+					Control topmost = GetTopmostControl(inventory);
+					if (topmost != null) RefreshRelicInventoryUi(topmost);
+				}
+				inventory.AcceptEvent();
+			}
+		}
+	}
+
 	private static Button EnsureRelicToggleButton(Control inventory)
 	{
-		//IL_0035: Unknown result type (might be due to invalid IL or missing references)
-		//IL_003a: Unknown result type (might be due to invalid IL or missing references)
-		//IL_004b: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0054: Unknown result type (might be due to invalid IL or missing references)
-		//IL_005f: Unknown result type (might be due to invalid IL or missing references)
-		//IL_006a: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0075: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0080: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0089: Expected Obj, but got Unknown
 		Node? val = FindChild((Node)(object)inventory, RelicToggleButtonName);
 		Button val2 = (Button)(object)((val is Button) ? val : null);
 		if (val2 != null)
@@ -213,10 +360,28 @@ internal static class RunUiPatches
 			Size = new Vector2(56f, 56f),
 			Visible = false
 		};
-		((Control)val3).AddThemeFontSizeOverride((StringName)("font_size"), 28);
+		((Control)val3).AddThemeFontSizeOverride((StringName)("font_size"), 16);
 		((BaseButton)val3).Pressed += () =>
 		{
-			_showSingleRelicRowOnly = !_showSingleRelicRowOnly;
+			IReadOnlyList<Control> holders = EndlessReflection.GetRelicInventoryHolders(inventory);
+			int rowCapacity = GetFirstRelicRowCount(inventory, holders);
+			int totalRows = (holders.Count + rowCapacity - 1) / rowCapacity;
+			int maxVisibleRows = _showSingleRelicRowOnly ? 1 : 3;
+
+			if (totalRows > 3)
+			{
+				_relicRowScrollOffset += maxVisibleRows;
+				if (_relicRowScrollOffset >= totalRows)
+				{
+					_relicRowScrollOffset = 0;
+				}
+			}
+			else
+			{
+				_showSingleRelicRowOnly = !_showSingleRelicRowOnly;
+				_relicRowScrollOffset = 0;
+			}
+
 			Control topmostControl = GetTopmostControl(inventory);
 			if (topmostControl != null)
 			{
@@ -230,12 +395,6 @@ internal static class RunUiPatches
 
 	private static void UpdateRelicToggleButton(Button button, Control inventory)
 	{
-		//IL_001f: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0024: Unknown result type (might be due to invalid IL or missing references)
-		//IL_002a: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0042: Unknown result type (might be due to invalid IL or missing references)
-		//IL_005a: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0067: Unknown result type (might be due to invalid IL or missing references)
 		IReadOnlyList<Control> relicInventoryHolders = EndlessReflection.GetRelicInventoryHolders(inventory);
 		if (relicInventoryHolders.Count > 0)
 		{
@@ -248,9 +407,32 @@ internal static class RunUiPatches
 			((Control)button).Theme = val.Theme;
 			((Control)button).ThemeTypeVariation = val.ThemeTypeVariation;
 		}
+
+		int rowCapacity = GetFirstRelicRowCount(inventory, relicInventoryHolders);
+		int totalRows = (relicInventoryHolders.Count + rowCapacity - 1) / rowCapacity;
+		int maxVisibleRows = _showSingleRelicRowOnly ? 1 : 3;
+
+		if (totalRows <= 1)
+		{
+			((CanvasItem)button).Visible = false;
+			return;
+		}
+
 		((CanvasItem)button).Visible = true;
-		button.Text = (_showSingleRelicRowOnly ? "+" : "-");
-		((Control)button).TooltipText = (_showSingleRelicRowOnly ? "Show all relic rows" : "Show only the first relic row");
+		if (totalRows > 3)
+		{
+			int startRowDisp = _relicRowScrollOffset + 1;
+			int endRowDisp = Math.Min(totalRows, _relicRowScrollOffset + maxVisibleRows);
+			((Control)button).AddThemeFontSizeOverride((StringName)("font_size"), 14);
+			button.Text = $"{startRowDisp}-{endRowDisp}\n/{totalRows}";
+			((Control)button).TooltipText = $"Showing rows {startRowDisp}-{endRowDisp} of {totalRows}.\nClick to cycle rows, or use Mouse Wheel to scroll.";
+		}
+		else
+		{
+			((Control)button).AddThemeFontSizeOverride((StringName)("font_size"), 26);
+			button.Text = (_showSingleRelicRowOnly ? "+" : "-");
+			((Control)button).TooltipText = (_showSingleRelicRowOnly ? "Expand: show up to 3 relic rows" : "Collapse: show only 1 relic row");
+		}
 		((Node)inventory).MoveChild((Node)(object)button, 0);
 	}
 
@@ -295,25 +477,59 @@ internal static class RunUiPatches
 		return relicInventoryHolderAmountText.Any(char.IsDigit);
 	}
 
-	private static void ApplyRelicVisibilityMode(Control inventory, bool showSingleRowOnly)
+	private static void ApplyRelicVisibilityMode(Control inventory)
 	{
-		IReadOnlyList<Control> relicInventoryHolders = EndlessReflection.GetRelicInventoryHolders(inventory);
-		if (relicInventoryHolders.Count == 0)
+		IReadOnlyList<Control> holders = EndlessReflection.GetRelicInventoryHolders(inventory);
+		if (holders.Count == 0)
 		{
 			return;
 		}
-		int num = (showSingleRowOnly ? GetFirstRelicRowCount(inventory, relicInventoryHolders) : relicInventoryHolders.Count);
-		bool flag = false;
-		for (int i = 0; i < relicInventoryHolders.Count; i++)
+		int rowCapacity = GetFirstRelicRowCount(inventory, holders);
+		int totalRows = (holders.Count + rowCapacity - 1) / rowCapacity;
+		int maxVisibleRows = _showSingleRelicRowOnly ? 1 : 3;
+		int maxOffset = Math.Max(0, totalRows - maxVisibleRows);
+		_relicRowScrollOffset = Math.Clamp(_relicRowScrollOffset, 0, maxOffset);
+
+		// If a new relic was acquired that is currently outside visible range, auto-scroll to reveal it
+		DateTime now = DateTime.UtcNow;
+		int autoScrollRow = -1;
+		for (int i = 0; i < holders.Count; i++)
 		{
-			bool flag2 = i < num;
-			if (((CanvasItem)relicInventoryHolders[i]).Visible != flag2)
+			object? model = EndlessReflection.GetRelicInventoryHolderModel(holders[i]);
+			if (model != null)
 			{
-				((CanvasItem)relicInventoryHolders[i]).Visible = flag2;
-				flag = true;
+				lock (_newRelics)
+				{
+					if (_newRelics.TryGetValue(model, out DateTime acquiredAt) && (now - acquiredAt).TotalSeconds < 3.0)
+					{
+						int targetRow = i / rowCapacity;
+						if (targetRow < _relicRowScrollOffset || targetRow >= _relicRowScrollOffset + maxVisibleRows)
+						{
+							autoScrollRow = targetRow;
+						}
+					}
+				}
 			}
 		}
-		if (flag)
+		if (autoScrollRow >= 0)
+		{
+			_relicRowScrollOffset = Math.Clamp(autoScrollRow - maxVisibleRows + 1, 0, maxOffset);
+		}
+
+		int startIndex = _relicRowScrollOffset * rowCapacity;
+		int endIndex = Math.Min(holders.Count, (_relicRowScrollOffset + maxVisibleRows) * rowCapacity);
+
+		bool changed = false;
+		for (int i = 0; i < holders.Count; i++)
+		{
+			bool visible = i >= startIndex && i < endIndex;
+			if (((CanvasItem)holders[i]).Visible != visible)
+			{
+				((CanvasItem)holders[i]).Visible = visible;
+				changed = true;
+			}
+		}
+		if (changed)
 		{
 			EndlessReflection.UpdateRelicInventoryNavigation(inventory);
 		}
