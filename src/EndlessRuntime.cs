@@ -155,7 +155,8 @@ internal static class EndlessRuntime
 		int value = EndlessReflection.GetCurrentActIndex(runState) + 1;
 		decimal enemyScalingMultiplier = GetEnemyScalingMultiplier(runState);
 		decimal enemyDamageScalingMultiplier = GetEnemyDamageScalingMultiplier(runState);
-		return $"Chapter {currentChapter}  Act {value}  HP x{enemyScalingMultiplier:0.##}  DMG x{enemyDamageScalingMultiplier:0.##}";
+		string prefix = currentChapter > 1 ? "Endless: " : "";
+		return $"{prefix}Chapter {currentChapter}  Act {value}  HP x{enemyScalingMultiplier:0.##}  DMG x{enemyDamageScalingMultiplier:0.##}";
 	}
 
 	/// <summary>

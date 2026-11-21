@@ -79,6 +79,8 @@ internal static class RunUiPatches
 			val.OffsetTop = 6f;
 			val.OffsetBottom = 28f;
 			((Control)val).AddThemeFontSizeOverride((StringName)("font_size"), 15);
+			((Control)val).AddThemeColorOverride((StringName)("font_outline_color"), new Color(0f, 0f, 0f, 1f));
+			((Control)val).AddThemeConstantOverride((StringName)("outline_size"), 3);
 			((Node)runNode).AddChild((Node)(object)val, false, (Node.InternalMode)0);
 		}
 	}

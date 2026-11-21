@@ -11,7 +11,7 @@ namespace BNKZ.STS2.EndlessPlus;
 [ModInitializer("Initialize")]
 internal static class EndlessBootstrap
 {
-	private const string ModVersion = "0.2.22";
+	private const string ModVersion = "1.0.1";
 
 	private static readonly Harmony Harmony = new Harmony("BNKZ.STS2.EndlessPlus");
 
@@ -110,7 +110,7 @@ internal static class EndlessBootstrap
 		_initialized = true;
 		try
 		{
-			EndlessLog.Info("Initializing BNKZ EndlessPlus v1.0.0.");
+			EndlessLog.Info($"Initializing BNKZ EndlessPlus v{ModVersion}.");
 			EndlessConfig.Load();
 			BaseLibIntegration.TryRegister();
 			LinuxNativeBootstrap.PrepareForHarmony();

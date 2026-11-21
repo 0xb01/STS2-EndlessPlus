@@ -144,10 +144,11 @@ internal static class ScalingCalculator
 		int chapter = completedLoops + 1;
 		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
 		int steps = CalculateSteps(runState);
+		string prefix = completedLoops > 0 ? "Endless: " : "";
 
 		if (steps <= 0)
 		{
-			return $"Endless: Chapter {chapter} · Act {act} | Vanilla";
+			return $"{prefix}Chapter {chapter} · Act {act}";
 		}
 
 		decimal hpMult = GetHpMultiplier(runState);
@@ -162,7 +163,7 @@ internal static class ScalingCalculator
 		string flatHpStr = flatHp > 0 ? $" (+{flatHp})" : "";
 		string flatDmgStr = flatDmg > 0 ? $" (+{flatDmg})" : "";
 
-		return $"Endless: Chapter {chapter} · Act {act} | HP {hpSign}{hpPct:0.#}%{flatHpStr} · DMG {dmgSign}{dmgPct:0.#}%{flatDmgStr}";
+		return $"{prefix}Chapter {chapter} · Act {act} | HP {hpSign}{hpPct:0.#}%{flatHpStr} · DMG {dmgSign}{dmgPct:0.#}%{flatDmgStr}";
 	}
 
 	/// <summary>
