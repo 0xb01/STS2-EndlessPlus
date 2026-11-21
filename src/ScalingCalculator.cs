@@ -144,46 +144,25 @@ internal static class ScalingCalculator
 		int chapter = completedLoops + 1;
 		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
 		int steps = CalculateSteps(runState);
+
+		if (steps <= 0)
+		{
+			return $"Endless: Chapter {chapter} · Act {act} | Vanilla";
+		}
+
 		decimal hpMult = GetHpMultiplier(runState);
 		decimal dmgMult = GetDamageMultiplier(runState);
-
-		string curveShort = EndlessConfig.Curve switch
-		{
-			ScalingCurve.Exponential => "Exp",
-			ScalingCurve.Linear => "Lin",
-			ScalingCurve.Fixed => "Fix",
-			_ => "Exp"
-		};
-
-		string intervalShort = EndlessConfig.Interval switch
-		{
-			ScalingInterval.Act => "Act",
-			ScalingInterval.Chapter => "Ch",
-			ScalingInterval.Floor => "Fl",
-			_ => "Act"
-		};
-
-		int ascension = EndlessReflection.GetAscensionLevel(runState);
-
 		decimal hpPct = (hpMult - 1m) * 100m;
 		decimal dmgPct = (dmgMult - 1m) * 100m;
 		string hpSign = hpPct >= 0m ? "+" : "";
 		string dmgSign = dmgPct >= 0m ? "+" : "";
 
-		int nextSteps = steps + 1;
-		decimal nextHpMult = ComputeMultiplier(EndlessConfig.EnemyHpScalingPerChapter, nextSteps, EndlessConfig.MinHpMultiplier, EndlessConfig.MaxHpMultiplier);
-		decimal nextDmgMult = ComputeMultiplier(EndlessConfig.EnemyDamageScalingPerChapter, nextSteps, EndlessConfig.MinDmgMultiplier, EndlessConfig.MaxDmgMultiplier);
-		decimal nextHpPct = (nextHpMult - 1m) * 100m;
-		decimal nextDmgPct = (nextDmgMult - 1m) * 100m;
-		string nextHpSign = nextHpPct >= 0m ? "+" : "";
-		string nextDmgSign = nextDmgPct >= 0m ? "+" : "";
-
 		int flatHp = GetFlatHpBonus(runState);
 		int flatDmg = GetFlatDamageBonus(runState);
-		string flatInfo = (flatHp > 0 || flatDmg > 0) ? $" [Flat: +{flatHp} HP / +{flatDmg} DMG]" : "";
-		string skipNotice = (!EndlessConfig.ScaleChapterOne && completedLoops <= 0) ? " [Skip Ch1]" : "";
+		string flatHpStr = flatHp > 0 ? $" (+{flatHp})" : "";
+		string flatDmgStr = flatDmg > 0 ? $" (+{flatDmg})" : "";
 
-		return $"ENDLESS ({curveShort}/{intervalShort} · A{ascension}) | Ch {chapter} Act {act} (Step {steps}){skipNotice}: HP {hpSign}{hpPct:0.#}% (x{hpMult:0.##}) · DMG {dmgSign}{dmgPct:0.#}% (x{dmgMult:0.##}){flatInfo} | Next: {nextHpSign}{nextHpPct:0.#}%/{nextDmgSign}{nextDmgPct:0.#}%";
+		return $"Endless: Chapter {chapter} · Act {act} | HP {hpSign}{hpPct:0.#}%{flatHpStr} · DMG {dmgSign}{dmgPct:0.#}%{flatDmgStr}";
 	}
 
 	/// <summary>

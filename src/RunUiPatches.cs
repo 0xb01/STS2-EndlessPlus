@@ -70,12 +70,15 @@ internal static class RunUiPatches
 			{
 				Name = (StringName)StatusLabelName,
 				MouseFilter = (Control.MouseFilterEnum)2,
-				Position = new Vector2(80f, 0f),
-				SizeFlagsHorizontal = (Control.SizeFlags)0,
 				TopLevel = true,
-				Modulate = new Color(1f, 0.94f, 0.72f, 0.95f)
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Top,
+				Modulate = new Color(1f, 0.94f, 0.72f, 0.90f)
 			};
-			((Control)val).AddThemeFontSizeOverride((StringName)("font_size"), 20);
+			val.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+			val.OffsetTop = 6f;
+			val.OffsetBottom = 28f;
+			((Control)val).AddThemeFontSizeOverride((StringName)("font_size"), 15);
 			((Node)runNode).AddChild((Node)(object)val, false, (Node.InternalMode)0);
 		}
 	}
