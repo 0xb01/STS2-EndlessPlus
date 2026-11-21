@@ -2,7 +2,7 @@
   "id": "BNKZ.STS2.EndlessPlus",
   "name": "EndlessPlus",
   "author": "BNKZ",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Customizable endless mode with multi-interval scaling, flat bonuses, and dynamic multiplayer sync.",
   "dependencies": [],
   "optional_dependencies": [

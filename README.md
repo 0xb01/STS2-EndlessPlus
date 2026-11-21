@@ -12,13 +12,16 @@ When you beat the final boss, your run does not end. You keep your character, de
 
 ## Features
 
-- 🔄 **Endless Loops**: Beat the game and keep going. When an act or chapter finishes, the next one starts automatically.
-- 📈 **Custom Monster Scaling**: Make enemies stronger over time. You choose how much extra HP and damage they get.
-- 🤝 **Full Multiplayer Config Sync**: Play with friends! Host rules (`interval`, `curve`, `skip_chapter`, `hp_scale`, `dmg_scale`, flat bonuses) sync across all players automatically with live ready indicators.
-- 🎒 **Relic Pagination & Scroll Guard**: Caps relic display to 3 rows max; mouse wheel scrolling and page button prevent late-game UI clutter.
-- ✨ **New Relic Indicator**: Shows a visual golden badge on newly acquired relics upon pickup, automatically fading out after 10 seconds.
-- ⚙️ **Easy Settings**: Change any setting in-game using the **BaseLib** mod menu, or by editing the config file.
-- ⚡ **Instant Updates**: Config changes apply immediately while playing — no need to restart the game.
+- 🔄 **Non-Stop Endless Mode**: Run continues after beating the final boss — keep your deck, relics, and HP into the next chapter.
+- 📈 **Custom Monster Scaling**: Tune enemy HP and attack damage scaling rates per Act, Chapter, or Floor.
+- 📐 **Math Curves & Clamps**: Choose Exponential, Linear, or Fixed scaling, with optional min/max multiplier limits.
+- 🛡️ **Flat Stat Bonuses**: Add flat HP and damage per step to keep multiplayer balance tight.
+- 🤝 **Full Multiplayer Host Sync**: Host settings automatically sync to all peers — zero manual file editing needed.
+- 👥 **Co-op Ready Status**: Game Over screen shows live player readiness counts (e.g. `Endless (3/4 Ready)`).
+- 🎒 **Relic Row Pagination**: Relic bar is capped to 3 rows max; scroll with mouse wheel or click page toggle button.
+- ✨ **New Relic Indicator**: Newly picked up relics show a golden "NEW" badge that auto-dismisses after 10 seconds.
+- 🎛️ **In-Game BaseLib UI**: Configure all settings directly inside the in-game Mod Configuration menu.
+- ⚡ **Instant Hot-Reload**: Changes saved to config file apply instantly mid-run without restarting.
 
 ---
 
