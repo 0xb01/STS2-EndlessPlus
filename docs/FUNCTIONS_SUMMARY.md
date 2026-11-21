@@ -39,6 +39,41 @@
 
 ---
 
+## 2.1 Project Directory Structure (`/src/`)
+
+```
+src/
+├── Config/               # Configuration state, file I/O, and BaseLib Mod Configuration UI
+│   ├── BaseLibIntegration.cs
+│   ├── EndlessConfig.cs
+│   └── EndlessPlusModConfig.cs
+├── Core/                 # Mod bootstrap, runtime state coordinator, logging, and platform fixes
+│   ├── EndlessBootstrap.cs
+│   ├── EndlessLog.cs
+│   ├── EndlessReflection.cs
+│   ├── EndlessRuntime.cs
+│   └── LinuxNativeBootstrap.cs
+├── Patches/              # Harmony runtime method interceptors
+│   ├── CombatRoomPatches.cs
+│   ├── CombatScalingPatches.cs
+│   ├── EventSynchronizerPatches.cs
+│   ├── GameLifecyclePatches.cs
+│   ├── GameOverScreenPatches.cs
+│   ├── LobbyPatches.cs
+│   ├── MapSelectionSynchronizerPatches.cs
+│   ├── NeowPatches.cs
+│   ├── RelicInventoryPatches.cs
+│   ├── RewardsSetSynchronizerPatches.cs
+│   └── RunManagerPatches.cs
+├── Scaling/              # Mathematical scaling curves, multipliers, and stat calculations
+│   └── ScalingCalculator.cs
+└── UI/                   # Godot UI controls, status HUD overlay, and transition dialogs
+    ├── ArchitectRewardOverlay.cs
+    └── RunUiPatches.cs
+```
+
+---
+
 ## 3. Core Modules & Function Reference
 
 ### 3.1 `EndlessRuntime`
