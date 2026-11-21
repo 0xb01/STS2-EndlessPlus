@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docu/sts2-endless-plus.png" alt="Slay the Spire 2 - EndlessPlus" width="550"/>
+  <img src="docs/sts2-endless-plus.png" alt="Slay the Spire 2 - EndlessPlus" width="550"/>
 </p>
 
 # EndlessPlus (Slay the Spire 2 Mod)

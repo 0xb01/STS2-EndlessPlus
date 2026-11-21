@@ -70,8 +70,8 @@ if (Test-Path $xmlPath) {
     Copy-Item $xmlPath -Destination $modDistDir
 }
 
-if (Test-Path (Join-Path $repoRoot "docu")) {
-    Copy-Item (Join-Path $repoRoot "docu") -Destination $modDistDir -Recurse
+if (Test-Path (Join-Path $repoRoot "docs")) {
+    Copy-Item (Join-Path $repoRoot "docs") -Destination $modDistDir -Recurse
 }
 
 # 5. Create cross-platform installer helper scripts inside staging
