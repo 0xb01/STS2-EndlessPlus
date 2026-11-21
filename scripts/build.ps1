@@ -74,49 +74,15 @@ if (Test-Path (Join-Path $repoRoot "docs")) {
     Copy-Item (Join-Path $repoRoot "docs") -Destination $modDistDir -Recurse
 }
 
-# 5. Create cross-platform installer helper scripts inside staging
-$winInstallScript = @'
-@echo off
-echo Installing EndlessPlus to Slay the Spire 2 mods folder...
-set "DEST=%PROGRAMFILES(X86)%\Steam\steamapps\common\Slay the Spire 2\mods\EndlessPlus"
-if not exist "%DEST%" mkdir "%DEST%"
-xcopy /E /Y /I "%~dp0EndlessPlus" "%DEST%"
-echo Installation complete!
-pause
-'@
-[System.IO.File]::WriteAllText((Join-Path $stagingDir "install-windows.bat"), $winInstallScript)
-
-$linuxInstallScript = @'
-#!/usr/bin/env bash
-set -e
-echo "Installing EndlessPlus to Slay the Spire 2 mods folder..."
-TARGET_DIR="${HOME}/.steam/steam/steamapps/common/Slay the Spire 2/mods/EndlessPlus"
-mkdir -p "${TARGET_DIR}"
-cp -rf "$(dirname "$0")/EndlessPlus/"* "${TARGET_DIR}/"
-echo "Installation complete!"
-'@
-[System.IO.File]::WriteAllText((Join-Path $stagingDir "install-linux.sh"), $linuxInstallScript.Replace("`r`n", "`n"))
-
-$macInstallScript = @'
-#!/usr/bin/env bash
-set -e
-echo "Installing EndlessPlus to Slay the Spire 2 mods folder..."
-TARGET_DIR="${HOME}/Library/Application Support/Steam/steamapps/common/Slay the Spire 2/mods/EndlessPlus"
-mkdir -p "${TARGET_DIR}"
-cp -rf "$(dirname "$0")/EndlessPlus/"* "${TARGET_DIR}/"
-echo "Installation complete!"
-'@
-[System.IO.File]::WriteAllText((Join-Path $stagingDir "install-mac.sh"), $macInstallScript.Replace("`r`n", "`n"))
-
-# 6. Generate the zipped release packages
+# 5. Generate clean zip release packages
 # User specified name: STS2-EndlessPlus_v{version}.zip
 $universalZipName = "STS2-EndlessPlus_v$version.zip"
 $universalZipPath = Join-Path $buildDir $universalZipName
 
 Write-Host "`nPackaging release archives..." -ForegroundColor Cyan
 
-# Package primary universal zip (Mac, Linux, and Windows)
-Compress-Archive -Path "$stagingDir\*" -DestinationPath $universalZipPath -Force
+# Package clean mod directory (contains EndlessPlus/ root folder for Slay the Spire 2/mods/)
+Compress-Archive -Path $modDistDir -DestinationPath $universalZipPath -Force
 Write-Host "Created Universal (Mac/Linux/Windows): $universalZipName" -ForegroundColor Green
 
 # Package platform-specific named zips as well
@@ -128,7 +94,7 @@ Copy-Item $universalZipPath (Join-Path $buildDir $winZipName) -Force
 Copy-Item $universalZipPath (Join-Path $buildDir $linuxZipName) -Force
 Copy-Item $universalZipPath (Join-Path $buildDir $macZipName) -Force
 
-# 7. Clean up staging folder
+# 6. Clean up staging folder
 Remove-Item -Recurse -Force $stagingDir
 
 Write-Host "`nBuild succeeded! Output files in /build/:" -ForegroundColor Green

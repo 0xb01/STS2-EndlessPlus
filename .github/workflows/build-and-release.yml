@@ -127,9 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: STS2-EndlessPlus_v${{ steps.version.outputs.VERSION }}
-          path: |
-            STS2-EndlessPlus_v*.zip
-            bin/Release/BNKZ.STS2.EndlessPlus.dll
+          path: staging/EndlessPlus
 
       - name: Create GitHub Release
         if: steps.deps.outputs.has_deps == 'true' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release))
@@ -138,6 +136,4 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.version.outputs.VERSION) }}
           name: EndlessPlus v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
-          files: |
-            STS2-EndlessPlus_v*.zip
-            bin/Release/BNKZ.STS2.EndlessPlus.dll
+          files: STS2-EndlessPlus_v*.zip
