@@ -13,11 +13,6 @@ obj/
 .vscode/
 .idea/
 
-# Local game assemblies (CI / external reference folder)
-lib/*.dll
-!lib/.gitkeep
-!lib/README.md
-
 # CI secrets & exports
 ci-secret.txt
 scripts/*.txt

@@ -72,7 +72,7 @@ Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any 
 
 ## Building from Source
 
-If you want to build the mod yourself:
+All required game assemblies are included in the `lib/` directory for turnkey builds:
 
 1. Install the [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0).
 2. Clone this repository:
@@ -88,17 +88,9 @@ If you want to build the mod yourself:
 
 ---
 
-## GitHub Actions & CI Secret Setup
+## Continuous Integration (GitHub Actions)
 
-GitHub runners do not include game files. On regular code pushes, GitHub Actions verifies the setup and skips the build if game files are missing so your commit checks stay green.
-
-To enable automated builds and releases in GitHub Actions:
-1. Run `./scripts/export-ci-secret.ps1` in PowerShell to package your local game DLLs into a base64 secret.
-2. In your GitHub repository, go to **Settings** → **Secrets and variables** → **Actions**.
-3. Create a **New repository secret**:
-   - Name: `STS2_LIBS_BASE64`
-   - Value: Paste the generated base64 string from `ci-secret.txt`.
-4. GitHub Actions will now automatically build and package release zips on every release!
+The repository includes a GitHub Actions workflow (`.github/workflows/build-and-release.yml`) that runs on every push and pull request. Because dependencies are bundled in `lib/`, CI automatically compiles, tests, packages release zips, and publishes GitHub releases when tags (`v*`) are pushed.
 
 ---
 
