@@ -60,6 +60,8 @@
        Override via commandline: dotnet build -p:STS2_PATH="/custom/path"
        ================================================================================= -->
   <PropertyGroup>
+    <STS2_PATH Condition="'$(STS2_PATH)' == '' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll')">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2_PATH>
+    <STS2_PATH Condition="'$(STS2_PATH)' == '' and Exists('lib\sts2.dll')">lib</STS2_PATH>
     <STS2_PATH Condition="'$(STS2_PATH)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2_PATH>
   </PropertyGroup>
 
@@ -71,25 +73,33 @@
   <ItemGroup>
     <!-- Godot 4.x C# Runtime: Engine nodes, controls, UI signals, and scene tree -->
     <Reference Include="GodotSharp">
-      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\GodotSharp.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\data_sts2_windows_x86_64\GodotSharp.dll')">$(STS2_PATH)\data_sts2_windows_x86_64\GodotSharp.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\GodotSharp.dll')">$(STS2_PATH)\GodotSharp.dll</HintPath>
+      <HintPath Condition="Exists('lib\GodotSharp.dll')">lib\GodotSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- Slay the Spire 2 Core: Game logic, runs, acts, creatures, combat, and saves -->
     <Reference Include="sts2">
-      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\sts2.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\data_sts2_windows_x86_64\sts2.dll')">$(STS2_PATH)\data_sts2_windows_x86_64\sts2.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\sts2.dll')">$(STS2_PATH)\sts2.dll</HintPath>
+      <HintPath Condition="Exists('lib\sts2.dll')">lib\sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- 0Harmony: Dynamic runtime bytecode patching library for hooking STS2 methods -->
     <Reference Include="0Harmony">
-      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\data_sts2_windows_x86_64\0Harmony.dll')">$(STS2_PATH)\data_sts2_windows_x86_64\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\0Harmony.dll')">$(STS2_PATH)\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('lib\0Harmony.dll')">lib\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- BaseLib: STS2 Modding library providing SimpleModConfig in-game settings UI -->
     <Reference Include="BaseLib">
-      <HintPath>$(STS2_PATH)\mods\BaseLib\BaseLib.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\mods\BaseLib\BaseLib.dll')">$(STS2_PATH)\mods\BaseLib\BaseLib.dll</HintPath>
+      <HintPath Condition="Exists('$(STS2_PATH)\BaseLib.dll')">$(STS2_PATH)\BaseLib.dll</HintPath>
+      <HintPath Condition="Exists('lib\BaseLib.dll')">lib\BaseLib.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

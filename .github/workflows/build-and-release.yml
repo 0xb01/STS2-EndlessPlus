@@ -1,0 +1,127 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publish GitHub Release'
+        type: boolean
+        default: false
+      tag_name:
+        description: 'Release Tag Override (e.g. v1.0.0)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Mod
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Resolve Game Dependencies
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "lib" | Out-Null
+
+          # If secret base64 payload is provided, restore dependencies to lib/
+          if ("$env:STS2_LIBS_BASE64") {
+            Write-Host "Restoring dependencies from STS2_LIBS_BASE64 secret..."
+            $bytes = [Convert]::FromBase64String("$env:STS2_LIBS_BASE64")
+            $zipPath = "lib/deps.zip"
+            [IO.File]::WriteAllBytes($zipPath, $bytes)
+            Expand-Archive -Path $zipPath -DestinationPath "lib" -Force
+            Remove-Item $zipPath -Force
+          }
+
+          # Check if required assemblies exist in lib/
+          $required = @("GodotSharp.dll", "sts2.dll", "0Harmony.dll", "BaseLib.dll")
+          $missing = @()
+          foreach ($dll in $required) {
+            if (-not (Test-Path "lib/$dll")) {
+              $missing += $dll
+            }
+          }
+
+          if ($missing.Count -gt 0) {
+            Write-Error "Missing required game dependencies in lib/: $($missing -join ', '). Set STS2_LIBS_BASE64 repository secret or run on runner with STS2 installed."
+            exit 1
+          }
+
+          Write-Host "All game dependencies resolved successfully in lib/."
+        env:
+          STS2_LIBS_BASE64: ${{ secrets.STS2_LIBS_BASE64 }}
+
+      - name: Extract Mod Version
+        id: version
+        shell: pwsh
+        run: |
+          $json = Get-Content -Raw "BNKZ.STS2.EndlessPlus.json" | ConvertFrom-Json
+          $ver = $json.version
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $ver = "${{ github.ref_name }}".TrimStart('v')
+          } elseif ("${{ inputs.tag_name }}" -ne "") {
+            $ver = "${{ inputs.tag_name }}".TrimStart('v')
+          }
+          Write-Host "Target Version: $ver"
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Build Solution
+        run: dotnet build BNKZ.STS2.EndlessPlus.csproj -c Release -p:STS2_PATH="lib"
+
+      - name: Stage Distribution Package
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $distDir = "staging/EndlessPlus"
+          New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+
+          Copy-Item "bin/Release/BNKZ.STS2.EndlessPlus.dll" -Destination $distDir
+          Copy-Item "BNKZ.STS2.EndlessPlus.json" -Destination $distDir
+          Copy-Item "BNKZ.STS2.EndlessPlus.config" -Destination $distDir
+          Copy-Item "README.md" -Destination $distDir
+          if (Test-Path "bin/Release/BNKZ.STS2.EndlessPlus.xml") {
+            Copy-Item "bin/Release/BNKZ.STS2.EndlessPlus.xml" -Destination $distDir
+          }
+
+          $zipName = "BNKZ.STS2.EndlessPlus-v$ver.zip"
+          Compress-Archive -Path "staging/EndlessPlus" -DestinationPath $zipName -Force
+          Write-Host "Created archive: $zipName"
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.ZIP_NAME }}
+          path: |
+            BNKZ.STS2.EndlessPlus-*.zip
+            bin/Release/BNKZ.STS2.EndlessPlus.dll
+
+      - name: Create GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release) }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.version.outputs.VERSION) }}
+          name: EndlessPlus v${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          files: |
+            BNKZ.STS2.EndlessPlus-*.zip
+            bin/Release/BNKZ.STS2.EndlessPlus.dll
