@@ -14,7 +14,7 @@ When you beat the final boss, your run does not end. You keep your character, de
 
 - 🔄 **Endless Loops**: Beat the game and keep going. When an act or chapter finishes, the next one starts automatically.
 - 📈 **Custom Monster Scaling**: Make enemies stronger over time. You choose how much extra HP and damage they get.
-- 🤝 **Multiplayer Co-op Support**: Play with friends! The host sets the rules, and all players stay in sync. Extra players can trigger bonus party scaling to balance the team.
+- 🤝 **Multiplayer Co-op Support**: Play with friends! Loop progression, HP scale, and damage scale rates sync from the host so the team advances together.
 - ⚙️ **Easy Settings**: Change any setting in-game using the **BaseLib** mod menu, or by editing the config file.
 - ⚡ **Instant Updates**: Config changes apply immediately while playing — no need to restart the game.
 
@@ -29,7 +29,7 @@ When you beat the final boss, your run does not end. You keep your character, de
 
 ## Installation
 
-1. Download the latest `BNKZ.STS2.EndlessPlus-v*.zip` from the [Releases](https://github.com/0xb01/STS2-EndlessPlus/releases) page.
+1. Download the latest `STS2-EndlessPlus_v*.zip` from the [Releases](https://github.com/0xb01/STS2-EndlessPlus/releases) page.
 2. Extract the zip file. You will get a folder named `EndlessPlus`.
 3. Move the `EndlessPlus` folder into your game's `mods` directory:
    ```
@@ -59,18 +59,19 @@ Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any 
 | `curve` | `exponential` | How enemy stats grow: <br>• `exponential` = Stats grow faster each loop (multiplicative). <br>• `linear` = Stats grow by the same amount each loop. <br>• `fixed` = Stats stay at one fixed multiplier. |
 | `hp_scale` | `1.08` | Monster Max HP multiplier per step (`1.08` = +8% HP per step). |
 | `dmg_scale` | `1.05` | Monster Attack Damage multiplier per step (`1.05` = +5% damage per step). |
-| `flat_hp_per_step` | `0` | Extra flat HP added to enemies per step (e.g. `10` adds 10 HP each loop). |
-| `flat_dmg_per_step` | `0` | Extra flat damage added to enemy attacks per step. |
-| `party_hp_flat` | `0` | Extra flat HP added per co-op friend in the lobby. |
-| `party_dmg_flat` | `0` | Extra flat damage added per co-op friend in the lobby. |
+| `flat_hp_per_step` | `500` | Extra flat HP added to enemies per step (`500` adds +500 HP each step). |
+| `flat_dmg_per_step` | `2` | Extra flat damage added to enemy attacks per step (`2` adds +2 DMG each step). |
+| `ascension_per_loop` | `-1` | Ascension increase per loop: `-1` = vanilla, `0` = lock level, `1+` = increase each loop. |
+| `max_ascension` | `10` | Hard ceiling for Ascension level during endless runs. |
+| `override_hud` | `true` | When `true`, displays scaling stats in the top HUD banner. |
 
 ---
 
 ## Co-op / Multiplayer Details
 
-- **Host Rules**: In multiplayer, the host's settings are sent to all other players automatically.
-- **Sync**: All players transition into the next loop together. No desyncs or broken combat states.
-- **Hot-Reload Safety**: If someone edits the config file during a combat fight, the changes wait until the next room to keep combat smooth.
+- **Host Authority**: Loop transitions, Chapter advancement, and percentage multipliers (`hp_scale`, `dmg_scale`) sync from the host automatically.
+- **Config Sync**: Scaling interval (`interval`), curve formula (`curve`), and flat stat bonuses are evaluated locally; all players must use matching config settings to avoid combat math desyncs.
+- **Hot-Reload Safety**: Config file reloads pause during active combat turns to prevent mid-fight desyncs.
 
 ---
 
@@ -97,14 +98,8 @@ All required game assemblies are included in the `lib/` directory for turnkey bu
 
 ---
 
-## Continuous Integration (GitHub Actions)
-
-The repository includes a GitHub Actions workflow (`.github/workflows/build-and-release.yml`) that runs on every push and pull request. Because dependencies are bundled in `lib/`, CI automatically compiles, tests, packages release zips, and publishes GitHub releases when tags (`v*`) are pushed.
-
----
-
 ## License & Credits
 
-- Created by **BNKZ**
+- Created by **BNKZ (0xb1) & Tito's and Tita's (Mika, Rick, Fle, and others)**
 - Requires **BaseLib** for in-game configuration UI
 - Built with **Harmony** for runtime patching
