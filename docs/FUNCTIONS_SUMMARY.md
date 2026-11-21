@@ -115,7 +115,7 @@ Pure calculation engine for monster stat scaling.
 | `GetDamageMultiplier(object runState)` | `public` | Calculates enemy attack damage multiplier using host-synced or local scale factor across elapsed steps. |
 | `GetFlatHpBonus(object runState)` | `public` | Computes flat monster HP added per step (`flat_hp_per_step * steps`). |
 | `GetFlatDamageBonus(object runState)` | `public` | Computes flat attack damage added per hit per step (`flat_dmg_per_step * steps`). |
-| `FormatStatusText(object runState)` | `public` | Formats comprehensive HUD banner: `ENDLESS (Exp/Act · A10) \| Ch 2 Act 1 (Step 3): HP +26% (x1.26) · DMG +15.8% (x1.16) [Flat: +1500 HP / +6 DMG] \| Next: +36%/+21.6%`. |
+| `FormatStatusText(object runState)` | `public` | Formats clean top-center HUD text: Chapter 1 shows `Chapter X · Act Y`; Endless (Chapter 2+) adds `Endless: ` prefix and active scaling stats (`Endless: Chapter X · Act Y \| HP +A% · DMG +B%`). |
 | `ComputeMultiplier(...)` | `private` | Evaluates mathematical scaling curve: Exponential (`scale ^ steps`), Linear (`1 + (scale - 1) * steps`), or Fixed (`scale`). Clamps output within `[min, max]`. |
 | `Clamp(...)` | `private` | Constrains multipliers within configured minimum floor and optional maximum cap. |
 
