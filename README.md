@@ -45,7 +45,7 @@ When you beat the final boss, your run does not end. You keep your character, de
 You can change settings in two ways:
 
 ### 1. In-Game Menu (Requires BaseLib)
-Open **Options** → **Mods** → **EndlessPlus** to adjust sliders and dropdowns.
+On the Main Menu, click **Mod Configuration**, select the **Endless Plus** tab, and adjust the sliders and dropdowns.
 
 ### 2. Config File (No BaseLib Needed)
 Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any text editor (Notepad, VS Code). Changes save and reload instantly!
