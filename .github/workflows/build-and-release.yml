@@ -117,7 +117,7 @@ jobs:
             Copy-Item "bin/Release/BNKZ.STS2.EndlessPlus.xml" -Destination $distDir
           }
 
-          $zipName = "BNKZ.STS2.EndlessPlus-v$ver.zip"
+          $zipName = "STS2-EndlessPlus_v$ver.zip"
           Compress-Archive -Path "staging/EndlessPlus" -DestinationPath $zipName -Force
           Write-Host "Created archive: $zipName"
           "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -126,9 +126,9 @@ jobs:
         if: steps.deps.outputs.has_deps == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.package.outputs.ZIP_NAME }}
+          name: STS2-EndlessPlus_v${{ steps.version.outputs.VERSION }}
           path: |
-            BNKZ.STS2.EndlessPlus-*.zip
+            STS2-EndlessPlus_v*.zip
             bin/Release/BNKZ.STS2.EndlessPlus.dll
 
       - name: Create GitHub Release
@@ -139,5 +139,5 @@ jobs:
           name: EndlessPlus v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           files: |
-            BNKZ.STS2.EndlessPlus-*.zip
+            STS2-EndlessPlus_v*.zip
             bin/Release/BNKZ.STS2.EndlessPlus.dll

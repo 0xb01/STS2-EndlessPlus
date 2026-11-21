@@ -88,6 +88,11 @@ All required game assemblies are included in the `lib/` directory for turnkey bu
    ```bash
    dotnet build -c Release
    ```
+   Or run the one-click build script to create packaged zip archives in `/build/`:
+   ```bash
+   ./build.bat             # On Windows
+   pwsh ./scripts/build.ps1 # On Linux / Mac / PowerShell
+   ```
 4. If Slay the Spire 2 is installed in the default Steam folder, the compiled DLL automatically deploys to your `mods/EndlessPlus` folder!
 
 ---

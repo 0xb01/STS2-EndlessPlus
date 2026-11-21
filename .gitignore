@@ -1,6 +1,7 @@
 # Build results
 bin/
 obj/
+build/
 *.zip
 
 # User-specific files
