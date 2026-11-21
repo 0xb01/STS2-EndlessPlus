@@ -55,7 +55,7 @@ Edit `BNKZ.STS2.EndlessPlus.config` in your `mods/EndlessPlus/` folder with any 
 | Setting | Default | What it does |
 | :--- | :---: | :--- |
 | `interval` | `act` | How often enemies get stronger: <br>• `act` = Every act transition (recommended). <br>• `chapter` = Every full chapter loop. <br>• `floor` = Every single room. |
-| `skip_chapter` | `true` | If `true`, Chapter 1 has normal vanilla difficulty. Enemy scaling begins in Chapter 2. |
+| `skip_chapter` | `true` | **Start scale on Chapter 2**: When `true`, Chapter 1 has normal vanilla difficulty and enemy scaling begins in Chapter 2. |
 | `curve` | `exponential` | How enemy stats grow: <br>• `exponential` = Stats grow faster each loop (multiplicative). <br>• `linear` = Stats grow by the same amount each loop. <br>• `fixed` = Stats stay at one fixed multiplier. |
 | `hp_scale` | `1.08` | Monster Max HP multiplier per step (`1.08` = +8% HP per step). |
 | `dmg_scale` | `1.05` | Monster Attack Damage multiplier per step (`1.05` = +5% damage per step). |

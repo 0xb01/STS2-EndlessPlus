@@ -150,7 +150,7 @@ public class EndlessPlusModConfig : SimpleModConfig
 				{ "BNKZ.mod_title", "Endless Plus" },
 				{ "BNKZ-INTERVAL.title", "Scaling Interval" },
 				{ "BNKZ-INTERVAL.hover.desc", "Determines how frequently enemy stats scale up: Act transition, Chapter completion, or every Floor." },
-				{ "BNKZ-SKIP_CHAPTER_ONE.title", "Skip Chapter 1 (Loop 1)" },
+				{ "BNKZ-SKIP_CHAPTER_ONE.title", "Start scale on Chapter 2" },
 				{ "BNKZ-SKIP_CHAPTER_ONE.hover.desc", "When enabled, Chapter 1 remains at normal vanilla difficulty (1.0x). Scaling begins in Chapter 2." },
 				{ "BNKZ-CURVE.title", "Scaling Curve" },
 				{ "BNKZ-CURVE.hover.desc", "Math formula for scaling: Exponential (compounds per step), Linear (adds percentage per step), or Fixed." },
