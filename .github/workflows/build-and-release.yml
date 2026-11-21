@@ -6,6 +6,8 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  release:
+    types: [ published ]
   workflow_dispatch:
     inputs:
       create_release:
@@ -85,7 +87,9 @@ jobs:
         run: |
           $json = Get-Content -Raw "BNKZ.STS2.EndlessPlus.json" | ConvertFrom-Json
           $ver = $json.version
-          if ("${{ github.ref_type }}" -eq "tag") {
+          if ("${{ github.event_name }}" -eq "release") {
+            $ver = "${{ github.event.release.tag_name }}".TrimStart('v')
+          } elseif ("${{ github.ref_type }}" -eq "tag") {
             $ver = "${{ github.ref_name }}".TrimStart('v')
           } elseif ("${{ inputs.tag_name }}" -ne "") {
             $ver = "${{ inputs.tag_name }}".TrimStart('v')
@@ -130,10 +134,10 @@ jobs:
           path: staging/EndlessPlus
 
       - name: Create GitHub Release
-        if: steps.deps.outputs.has_deps == 'true' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release))
+        if: steps.deps.outputs.has_deps == 'true' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release) || github.event_name == 'release')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.version.outputs.VERSION) }}
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.version.outputs.VERSION)) }}
           name: EndlessPlus v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           files: STS2-EndlessPlus_v*.zip
