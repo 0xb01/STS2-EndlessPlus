@@ -51,8 +51,16 @@
     <!-- Generate XML documentation file (BNKZ.STS2.EndlessPlus.xml) for IDE tooltips -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <!-- Suppress CS1591 warnings for missing XML doc comments on private/internal members -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Suppress CS1591 (missing XML docs) and CS8600-series (reflection nullable casts) -->
+    <NoWarn>$(NoWarn);CS1591;CS8600;CS8601;CS8602;CS8603;CS8604;CS8625</NoWarn>
+  </PropertyGroup>
+
+  <!-- =================================================================================
+       STS2 Game Path Configuration
+       Override via commandline: dotnet build -p:STS2_PATH="/custom/path"
+       ================================================================================= -->
+  <PropertyGroup>
+    <STS2_PATH Condition="'$(STS2_PATH)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</STS2_PATH>
   </PropertyGroup>
 
   <!-- =================================================================================
@@ -63,25 +71,25 @@
   <ItemGroup>
     <!-- Godot 4.x C# Runtime: Engine nodes, controls, UI signals, and scene tree -->
     <Reference Include="GodotSharp">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\GodotSharp.dll</HintPath>
+      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\GodotSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- Slay the Spire 2 Core: Game logic, runs, acts, creatures, combat, and saves -->
     <Reference Include="sts2">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\sts2.dll</HintPath>
+      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- 0Harmony: Dynamic runtime bytecode patching library for hooking STS2 methods -->
     <Reference Include="0Harmony">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\data_sts2_windows_x86_64\0Harmony.dll</HintPath>
+      <HintPath>$(STS2_PATH)\data_sts2_windows_x86_64\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
 
     <!-- BaseLib: STS2 Modding library providing SimpleModConfig in-game settings UI -->
     <Reference Include="BaseLib">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods\BaseLib\BaseLib.dll</HintPath>
+      <HintPath>$(STS2_PATH)\mods\BaseLib\BaseLib.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
@@ -90,8 +98,8 @@
        Post-Build Deployment
        Automatically deploys compiled DLL to STS2 mod directory if present
        ================================================================================= -->
-  <Target Name="AutoDeployToModsFolder" AfterTargets="Build" Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods\EndlessPlus')">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2\mods\EndlessPlus" ContinueOnError="true" />
+  <Target Name="AutoDeployToModsFolder" AfterTargets="Build" Condition="Exists('$(STS2_PATH)\mods\EndlessPlus')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(STS2_PATH)\mods\EndlessPlus" ContinueOnError="true" />
   </Target>
 
 </Project>

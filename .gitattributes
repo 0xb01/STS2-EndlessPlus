@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
+*.cs text diff=csharp
+*.csproj text
+*.json text
+*.md text
+*.config text
+*.dll binary
+*.pdb binary

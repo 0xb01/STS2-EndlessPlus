@@ -582,7 +582,7 @@ internal static class GameOverScreenPatches
 			}
 			SetButtonsInteractive(screen, isInteractive: false);
 			EndlessLog.Info("Detected the host's endless launch marker on a multiplayer client. Starting the next endless chapter locally.");
-			StartClientLaunchAsync(screen, state);
+			_ = StartClientLaunchAsync(screen, state);
 		}
 	}
 
