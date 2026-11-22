@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Godot;
 
 namespace BNKZ.STS2.EndlessPlus;
@@ -41,6 +42,12 @@ internal static class RunUiPatches
 
 	private static Vector2? _customHudPosition;
 
+	private static PanelContainer? _statusPanel;
+
+	private static RichTextLabel? _statusRichText;
+
+	private static Button? _statusCollapseBtn;
+
 	public static void RecordNewRelic(object relic)
 	{
 		lock (_newRelics)
@@ -64,14 +71,30 @@ internal static class RunUiPatches
 
 	private static void UpdateStatusPanel(Control runNode)
 	{
-		Node? panelNode = FindStatusPanel((Node)(object)runNode);
-		if (panelNode is not PanelContainer panel)
+		PanelContainer? panel = _statusPanel;
+		if (!GodotObject.IsInstanceValid(panel))
+		{
+			panel = FindStatusPanel((Node)(object)runNode) as PanelContainer;
+			_statusPanel = panel;
+		}
+		if (panel == null)
 		{
 			return;
 		}
 
-		RichTextLabel? richText = FindChild(panel, StatusRichTextName) as RichTextLabel;
-		Button? collapseBtn = FindChild(panel, StatusCollapseBtnName) as Button;
+		RichTextLabel? richText = _statusRichText;
+		if (!GodotObject.IsInstanceValid(richText))
+		{
+			richText = FindNamedDescendant(panel, StatusRichTextName) as RichTextLabel;
+			_statusRichText = richText;
+		}
+
+		Button? collapseBtn = _statusCollapseBtn;
+		if (!GodotObject.IsInstanceValid(collapseBtn))
+		{
+			collapseBtn = FindNamedDescendant(panel, StatusCollapseBtnName) as Button;
+			_statusCollapseBtn = collapseBtn;
+		}
 
 		try
 		{
@@ -79,19 +102,38 @@ internal static class RunUiPatches
 			object runState = EndlessReflection.GetRunState(runManagerInstance);
 			if (richText != null)
 			{
-				richText.Text = EndlessRuntime.GetRunStatusBbCode(runState, _hudCollapsed);
+				string bbCode = EndlessRuntime.GetRunStatusBbCode(runState, _hudCollapsed);
+				richText.Text = bbCode;
 				string tooltip = EndlessRuntime.GetRunStatusTooltip(runState);
 				richText.TooltipText = tooltip;
 				panel.TooltipText = tooltip;
+
+				// Guarantee explicit minimum width so HBoxContainer does not compress RichTextLabel to 0px
+				string plain = Regex.Replace(bbCode, @"\[/?[^\]]+\]", "");
+				Font? font = richText.GetThemeFont((StringName)"normal_font");
+				int fontSize = richText.GetThemeFontSize((StringName)"normal_font_size");
+				if (fontSize <= 0)
+				{
+					fontSize = 15;
+				}
+				float fontWidth = font != null
+					? font.GetStringSize(plain, HorizontalAlignment.Left, -1f, fontSize).X
+					: (plain.Length * 9.5f);
+				int contentWidth = richText.GetContentWidth();
+				float targetWidth = Mathf.Max(contentWidth, fontWidth) + 10f;
+				richText.CustomMinimumSize = new Vector2(targetWidth, 22f);
 			}
 			if (collapseBtn != null)
 			{
 				collapseBtn.Text = _hudCollapsed ? "[+]" : "[—]";
 				collapseBtn.TooltipText = _hudCollapsed ? "Expand Ribbon" : "Collapse Ribbon";
 			}
+
+			panel.ResetSize();
 		}
-		catch
+		catch (Exception ex)
 		{
+			EndlessLog.Error("Failed to update status panel.", ex);
 			if (richText != null)
 			{
 				richText.Text = string.Empty;
@@ -121,8 +163,12 @@ internal static class RunUiPatches
 			legacyLabel.QueueFree();
 		}
 
-		if (FindStatusPanel((Node)(object)runNode) != null)
+		Node? existingPanelNode = FindStatusPanel((Node)(object)runNode);
+		if (existingPanelNode is PanelContainer existingPanel)
 		{
+			_statusPanel = existingPanel;
+			_statusRichText = FindNamedDescendant(existingPanel, StatusRichTextName) as RichTextLabel;
+			_statusCollapseBtn = FindNamedDescendant(existingPanel, StatusCollapseBtnName) as Button;
 			return;
 		}
 
@@ -211,6 +257,12 @@ internal static class RunUiPatches
 		hbox.AddChild(collapseBtn);
 		panel.AddChild(hbox);
 		((Node)runNode).AddChild(panel, false, (Node.InternalMode)0);
+
+		_statusPanel = panel;
+		_statusRichText = richText;
+		_statusCollapseBtn = collapseBtn;
+
+		UpdateStatusPanel(runNode);
 	}
 
 	private static void HandlePanelDragInput(PanelContainer panel, InputEvent @event)
@@ -228,6 +280,7 @@ internal static class RunUiPatches
 						panel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
 						panel.GrowHorizontal = Control.GrowDirection.Both;
 						panel.OffsetTop = 8f;
+						panel.ResetSize();
 						return;
 					}
 

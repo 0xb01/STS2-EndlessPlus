@@ -194,9 +194,10 @@ internal static class ScalingCalculator
 
 		if (steps <= 0)
 		{
+			string prefix = completedLoops > 0 ? "∞ " : "";
 			return collapsed
-				? $"[color=#f1c40f][b]∞ {chapter}-{act}[/b][/color]"
-				: $"[color=#f1c40f][b]∞ Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+				? $"[color=#f1c40f][b]{prefix}{chapter}-{act}[/b][/color]"
+				: $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
 		}
 
 		decimal hpMult = GetHpMultiplier(runState);
