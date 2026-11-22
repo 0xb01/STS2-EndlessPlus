@@ -13,7 +13,7 @@ internal static class EndlessBootstrap
 {
 	public const string ModTitle = "EndlessPlus";
 
-	public const string ModVersion = "1.0.3";
+	public const string ModVersion = "1.0.4";
 
 	private static readonly Harmony Harmony = new Harmony("BNKZ.STS2.EndlessPlus");
 
