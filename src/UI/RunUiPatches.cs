@@ -9,6 +9,12 @@ internal static class RunUiPatches
 {
 	private const string StatusLabelName = "BNKZEndlessModeStatusLabel";
 
+	private const string StatusPanelName = "BNKZEndlessModeStatusPanel";
+
+	private const string StatusRichTextName = "BNKZEndlessModeStatusRichText";
+
+	private const string StatusCollapseBtnName = "BNKZEndlessModeStatusCollapseBtn";
+
 	private const string StatusTimerName = "BNKZEndlessModeStatusTimer";
 
 	private const string GameOverScanTimerName = "BNKZEndlessModeGameOverScanTimer";
@@ -27,6 +33,14 @@ internal static class RunUiPatches
 
 	private static readonly Dictionary<object, DateTime> _newRelics = new();
 
+	private static bool _hudCollapsed;
+
+	private static bool _isDraggingHud;
+
+	private static Vector2 _hudDragOffset;
+
+	private static Vector2? _customHudPosition;
+
 	public static void RecordNewRelic(object relic)
 	{
 		lock (_newRelics)
@@ -40,75 +54,208 @@ internal static class RunUiPatches
 		Control val = (Control)((__instance is Control) ? __instance : null);
 		if (val != null)
 		{
-			EnsureStatusLabel(val);
+			EnsureStatusPanel(val);
 			EnsureStatusTimer(val);
 			EnsureGameOverScanTimer(val);
-			UpdateStatusLabel(val);
+			UpdateStatusPanel(val);
 			RefreshRelicInventoryUi(val);
 		}
 	}
 
-	private static void UpdateStatusLabel(Control runNode)
+	private static void UpdateStatusPanel(Control runNode)
 	{
-		Node? val = FindStatusLabel((Node)(object)runNode);
-		Label val2 = (Label)(object)((val is Label) ? val : null);
-		if (val2 == null)
+		Node? panelNode = FindStatusPanel((Node)(object)runNode);
+		if (panelNode is not PanelContainer panel)
 		{
 			return;
 		}
+
+		RichTextLabel? richText = FindChild(panel, StatusRichTextName) as RichTextLabel;
+		Button? collapseBtn = FindChild(panel, StatusCollapseBtnName) as Button;
+
 		try
 		{
 			object runManagerInstance = EndlessReflection.GetRunManagerInstance();
 			object runState = EndlessReflection.GetRunState(runManagerInstance);
-			val2.Text = EndlessRuntime.GetRunStatusText(runState);
+			if (richText != null)
+			{
+				richText.Text = EndlessRuntime.GetRunStatusBbCode(runState, _hudCollapsed);
+				string tooltip = EndlessRuntime.GetRunStatusTooltip(runState);
+				richText.TooltipText = tooltip;
+				panel.TooltipText = tooltip;
+			}
+			if (collapseBtn != null)
+			{
+				collapseBtn.Text = _hudCollapsed ? "[+]" : "[—]";
+				collapseBtn.TooltipText = _hudCollapsed ? "Expand Ribbon" : "Collapse Ribbon";
+			}
 		}
 		catch
 		{
-			val2.Text = string.Empty;
+			if (richText != null)
+			{
+				richText.Text = string.Empty;
+			}
+		}
+
+		if (!_isDraggingHud && _customHudPosition.HasValue)
+		{
+			Rect2 vp = panel.GetViewportRect();
+			if (vp.Size.X > 0 && vp.Size.Y > 0)
+			{
+				Vector2 sz = panel.Size;
+				float x = Mathf.Clamp(_customHudPosition.Value.X, 0f, Mathf.Max(0f, vp.Size.X - sz.X));
+				float y = Mathf.Clamp(_customHudPosition.Value.Y, 0f, Mathf.Max(0f, vp.Size.Y - sz.Y));
+				panel.GlobalPosition = new Vector2(x, y);
+			}
 		}
 	}
 
-	private static void EnsureStatusLabel(Control runNode)
+	private static void EnsureStatusPanel(Control runNode)
 	{
-		//IL_0017: Unknown result type (might be due to invalid IL or missing references)
-		//IL_001c: Unknown result type (might be due to invalid IL or missing references)
-		//IL_002d: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0036: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0041: Unknown result type (might be due to invalid IL or missing references)
-		//IL_004c: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0055: Unknown result type (might be due to invalid IL or missing references)
-		//IL_005d: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0072: Unknown result type (might be due to invalid IL or missing references)
-		//IL_007e: Expected Obj, but got Unknown
-		if (FindStatusLabel((Node)(object)runNode) == null)
+		// Clean up any legacy label
+		Node? legacyLabel = FindChild((Node)(object)runNode, StatusLabelName);
+		if (legacyLabel != null)
 		{
-			Label val = new Label
+			((Node)(object)runNode).RemoveChild(legacyLabel);
+			legacyLabel.QueueFree();
+		}
+
+		if (FindStatusPanel((Node)(object)runNode) != null)
+		{
+			return;
+		}
+
+		PanelContainer panel = new PanelContainer
+		{
+			Name = (StringName)StatusPanelName,
+			TopLevel = true,
+			MouseFilter = Control.MouseFilterEnum.Stop,
+			MouseDefaultCursorShape = Control.CursorShape.Move
+		};
+
+		StyleBoxFlat styleBox = new StyleBoxFlat
+		{
+			BgColor = new Color(0.09f, 0.08f, 0.12f, 0.90f),
+			BorderColor = new Color(0.50f, 0.42f, 0.26f, 0.90f),
+			BorderWidthLeft = 1,
+			BorderWidthTop = 1,
+			BorderWidthRight = 1,
+			BorderWidthBottom = 1,
+			CornerRadiusTopLeft = 7,
+			CornerRadiusTopRight = 7,
+			CornerRadiusBottomLeft = 7,
+			CornerRadiusBottomRight = 7,
+			ContentMarginLeft = 14f,
+			ContentMarginRight = 10f,
+			ContentMarginTop = 4f,
+			ContentMarginBottom = 4f,
+			ShadowColor = new Color(0f, 0f, 0f, 0.55f),
+			ShadowSize = 4
+		};
+		panel.AddThemeStyleboxOverride((StringName)"panel", styleBox);
+
+		if (_customHudPosition.HasValue)
+		{
+			panel.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+			panel.GlobalPosition = _customHudPosition.Value;
+		}
+		else
+		{
+			panel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+			panel.GrowHorizontal = Control.GrowDirection.Both;
+			panel.OffsetTop = 8f;
+		}
+
+		panel.GuiInput += (@event) => HandlePanelDragInput(panel, @event);
+
+		HBoxContainer hbox = new HBoxContainer
+		{
+			Name = (StringName)"BNKZEndlessModeStatusHBox",
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		hbox.AddThemeConstantOverride((StringName)"separation", 8);
+
+		RichTextLabel richText = new RichTextLabel
+		{
+			Name = (StringName)StatusRichTextName,
+			BbcodeEnabled = true,
+			FitContent = true,
+			ScrollActive = false,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			AutowrapMode = TextServer.AutowrapMode.Off
+		};
+		richText.AddThemeFontSizeOverride((StringName)"normal_font_size", 15);
+		richText.AddThemeFontSizeOverride((StringName)"bold_font_size", 15);
+
+		Button collapseBtn = new Button
+		{
+			Name = (StringName)StatusCollapseBtnName,
+			Flat = true,
+			FocusMode = Control.FocusModeEnum.None,
+			Text = _hudCollapsed ? "[+]" : "[—]",
+			CustomMinimumSize = new Vector2(24f, 20f),
+			MouseDefaultCursorShape = Control.CursorShape.PointingHand
+		};
+		collapseBtn.AddThemeFontSizeOverride((StringName)"font_size", 11);
+		collapseBtn.AddThemeColorOverride((StringName)"font_color", new Color(0.75f, 0.70f, 0.60f, 0.90f));
+		collapseBtn.AddThemeColorOverride((StringName)"font_hover_color", new Color(1f, 0.90f, 0.50f, 1f));
+		collapseBtn.Pressed += () =>
+		{
+			_hudCollapsed = !_hudCollapsed;
+			UpdateStatusPanel(runNode);
+		};
+
+		hbox.AddChild(richText);
+		hbox.AddChild(collapseBtn);
+		panel.AddChild(hbox);
+		((Node)runNode).AddChild(panel, false, (Node.InternalMode)0);
+	}
+
+	private static void HandlePanelDragInput(PanelContainer panel, InputEvent @event)
+	{
+		if (@event is InputEventMouseButton mb)
+		{
+			if (mb.ButtonIndex == MouseButton.Left)
 			{
-				Name = (StringName)StatusLabelName,
-				MouseFilter = (Control.MouseFilterEnum)2,
-				TopLevel = true,
-				HorizontalAlignment = HorizontalAlignment.Center,
-				VerticalAlignment = VerticalAlignment.Top,
-				Modulate = new Color(1f, 0.94f, 0.72f, 0.90f)
-			};
-			val.SetAnchorsPreset(Control.LayoutPreset.TopWide);
-			val.OffsetTop = 5f;
-			val.OffsetBottom = 35f;
-			((Control)val).AddThemeFontSizeOverride((StringName)("font_size"), 18);
-			((Control)val).AddThemeColorOverride((StringName)("font_outline_color"), new Color(0f, 0f, 0f, 1f));
-			((Control)val).AddThemeConstantOverride((StringName)("outline_size"), 8);
-			((Node)runNode).AddChild((Node)(object)val, false, (Node.InternalMode)0);
+				if (mb.Pressed)
+				{
+					if (mb.DoubleClick)
+					{
+						_customHudPosition = null;
+						_isDraggingHud = false;
+						panel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+						panel.GrowHorizontal = Control.GrowDirection.Both;
+						panel.OffsetTop = 8f;
+						return;
+					}
+
+					_isDraggingHud = true;
+					_hudDragOffset = mb.Position;
+				}
+				else if (_isDraggingHud)
+				{
+					_isDraggingHud = false;
+					_customHudPosition = panel.GlobalPosition;
+				}
+			}
+		}
+		else if (@event is InputEventMouseMotion mm && _isDraggingHud)
+		{
+			Vector2 newPos = mm.GlobalPosition - _hudDragOffset;
+			Rect2 vp = panel.GetViewportRect();
+			Vector2 sz = panel.Size;
+			float x = Mathf.Clamp(newPos.X, 0f, Mathf.Max(0f, vp.Size.X - sz.X));
+			float y = Mathf.Clamp(newPos.Y, 0f, Mathf.Max(0f, vp.Size.Y - sz.Y));
+			panel.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+			panel.GlobalPosition = new Vector2(x, y);
+			_customHudPosition = panel.GlobalPosition;
 		}
 	}
 
 	private static void EnsureStatusTimer(Control runNode)
 	{
-		//IL_002b: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0030: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0041: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0051: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0059: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0062: Expected Obj, but got Unknown
 		if (FindChild((Node)(object)runNode, StatusTimerName) != null)
 		{
 			return;
@@ -124,7 +271,7 @@ internal static class RunUiPatches
 		{
 			if (GodotObject.IsInstanceValid((GodotObject)(object)runNode))
 			{
-				UpdateStatusLabel(runNode);
+				UpdateStatusPanel(runNode);
 				RefreshRelicInventoryUi(runNode);
 			}
 		};
@@ -133,12 +280,6 @@ internal static class RunUiPatches
 
 	private static void EnsureGameOverScanTimer(Control runNode)
 	{
-		//IL_002b: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0030: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0041: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0051: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0059: Unknown result type (might be due to invalid IL or missing references)
-		//IL_0062: Expected Obj, but got Unknown
 		if (FindChild((Node)(object)runNode, GameOverScanTimerName) != null)
 		{
 			return;
@@ -160,9 +301,9 @@ internal static class RunUiPatches
 		((Node)runNode).AddChild((Node)(object)val, false, (Node.InternalMode)0);
 	}
 
-	private static Node? FindStatusLabel(Node runNode)
+	private static Node? FindStatusPanel(Node runNode)
 	{
-		return FindChild(runNode, StatusLabelName);
+		return FindChild(runNode, StatusPanelName);
 	}
 
 	private static void RefreshRelicInventoryUi(Control runNode)

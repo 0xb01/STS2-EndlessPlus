@@ -160,6 +160,47 @@ internal static class EndlessRuntime
 	}
 
 	/// <summary>
+	/// Formats top HUD banner BBCode status text based on active configuration.
+	/// </summary>
+	public static string GetRunStatusBbCode(object runState, bool collapsed)
+	{
+		if (EndlessConfig.OverrideHud)
+		{
+			return ScalingCalculator.FormatStatusBbCode(runState, collapsed);
+		}
+		int currentChapter = GetCurrentChapter(runState);
+		int value = EndlessReflection.GetCurrentActIndex(runState) + 1;
+		decimal enemyScalingMultiplier = GetEnemyScalingMultiplier(runState);
+		decimal enemyDamageScalingMultiplier = GetEnemyDamageScalingMultiplier(runState);
+		if (collapsed)
+		{
+			return $"[color=#f1c40f][b]∞ {currentChapter}-{value}[/b][/color]  [color=#ff6b6b]♥ x{enemyScalingMultiplier:0.##}[/color]  [color=#f39c12]⚔ x{enemyDamageScalingMultiplier:0.##}[/color]";
+		}
+		string prefix = currentChapter > 1 ? "[color=#f1c40f][b]∞ " : "";
+		string suffix = currentChapter > 1 ? "[/b][/color]" : "";
+		return $"{prefix}Chapter {currentChapter}{suffix} [color=#6e6557]·[/color] [color=#cfc7b8]Act {value}[/color]   [color=#5a4d3a]│[/color]   [color=#ff6b6b]♥ x{enemyScalingMultiplier:0.##}[/color]   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ x{enemyDamageScalingMultiplier:0.##}[/color]";
+	}
+
+	/// <summary>
+	/// Formats tooltip details for the top HUD banner.
+	/// </summary>
+	public static string GetRunStatusTooltip(object runState)
+	{
+		if (EndlessConfig.OverrideHud)
+		{
+			return ScalingCalculator.FormatStatusTooltip(runState);
+		}
+		int currentChapter = GetCurrentChapter(runState);
+		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
+		decimal hpMult = GetEnemyScalingMultiplier(runState);
+		decimal dmgMult = GetEnemyDamageScalingMultiplier(runState);
+		return $"Endless Mode: Chapter {currentChapter}, Act {act}\n" +
+		       $"Enemy HP: x{hpMult:0.##}\n" +
+		       $"Enemy DMG: x{dmgMult:0.##}\n\n" +
+		       $"[Drag anywhere to reposition · Double-click to reset · Click toggle to collapse]";
+	}
+
+	/// <summary>
 	/// Fetches the authoritative HP scale rate per chapter (reads host run state metadata in multiplayer).
 	/// </summary>
 	internal static decimal GetEnemyHpScalePerChapter(object runState)

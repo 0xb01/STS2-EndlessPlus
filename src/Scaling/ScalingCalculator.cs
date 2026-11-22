@@ -179,6 +179,80 @@ internal static class ScalingCalculator
 	}
 
 	/// <summary>
+	/// Formats BBCode status string for Option A polished ribbon HUD banner.
+	/// </summary>
+	/// <param name="runState">Current active run state object.</param>
+	/// <param name="collapsed">Whether HUD is rendered in compact single-stat format.</param>
+	/// <returns>Formatted BBCode string with color hierarchy.</returns>
+	public static string FormatStatusBbCode(object runState, bool collapsed)
+	{
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int completedLoops = settings.LoopCount;
+		int chapter = completedLoops + 1;
+		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
+		int steps = CalculateSteps(runState, settings);
+
+		if (steps <= 0)
+		{
+			return collapsed
+				? $"[color=#f1c40f][b]∞ {chapter}-{act}[/b][/color]"
+				: $"[color=#f1c40f][b]∞ Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+		}
+
+		decimal hpMult = GetHpMultiplier(runState);
+		decimal dmgMult = GetDamageMultiplier(runState);
+		decimal hpPct = (hpMult - 1m) * 100m;
+		decimal dmgPct = (dmgMult - 1m) * 100m;
+		string hpSign = hpPct >= 0m ? "+" : "";
+		string dmgSign = dmgPct >= 0m ? "+" : "";
+
+		int flatHp = GetFlatHpBonus(runState);
+		int flatDmg = GetFlatDamageBonus(runState);
+
+		if (collapsed)
+		{
+			return $"[color=#f1c40f][b]∞ {chapter}-{act}[/b][/color]   [color=#ff6b6b]♥ {hpSign}{hpPct:0.#}%[/color]   [color=#f39c12]⚔ {dmgSign}{dmgPct:0.#}%[/color]";
+		}
+
+		string flatHpBb = flatHp > 0 ? $" [color=#cc8585](+{flatHp})[/color]" : "";
+		string flatDmgBb = flatDmg > 0 ? $" [color=#caa060](+{flatDmg})[/color]" : "";
+
+		return $"[color=#f1c40f][b]∞ Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]   [color=#5a4d3a]│[/color]   [color=#ff6b6b]♥ {hpSign}{hpPct:0.#}%[/color]{flatHpBb}   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ {dmgSign}{dmgPct:0.#}%[/color]{flatDmgBb}";
+	}
+
+	/// <summary>
+	/// Formats comprehensive multiline tooltip for HUD banner.
+	/// </summary>
+	/// <param name="runState">Current active run state object.</param>
+	/// <returns>Multiline human-readable details and instructions.</returns>
+	public static string FormatStatusTooltip(object runState)
+	{
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int completedLoops = settings.LoopCount;
+		int chapter = completedLoops + 1;
+		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
+		int steps = CalculateSteps(runState, settings);
+
+		decimal hpMult = GetHpMultiplier(runState);
+		decimal dmgMult = GetDamageMultiplier(runState);
+		decimal hpPct = (hpMult - 1m) * 100m;
+		decimal dmgPct = (dmgMult - 1m) * 100m;
+		string hpSign = hpPct >= 0m ? "+" : "";
+		string dmgSign = dmgPct >= 0m ? "+" : "";
+
+		int flatHp = GetFlatHpBonus(runState);
+		int flatDmg = GetFlatDamageBonus(runState);
+		string flatHpStr = flatHp > 0 ? $" (+{flatHp} flat)" : "";
+		string flatDmgStr = flatDmg > 0 ? $" (+{flatDmg} flat)" : "";
+
+		return $"Endless Mode: Loop {completedLoops} (Chapter {chapter}, Act {act})\n" +
+		       $"Cadence: Every {settings.Interval} act(s) | Curve: {settings.Curve} | Steps: {steps}\n" +
+		       $"Enemy HP: x{hpMult:0.##} ({hpSign}{hpPct:0.#}%){flatHpStr}\n" +
+		       $"Enemy DMG: x{dmgMult:0.##} ({dmgSign}{dmgPct:0.#}%){flatDmgStr}\n\n" +
+		       $"[Drag anywhere to reposition · Double-click to reset · Click toggle to collapse]";
+	}
+
+	/// <summary>
 	/// Evaluates mathematical scaling curve (Fixed, Linear, or Exponential) for a given base scale factor across specified step count.
 	/// </summary>
 	/// <param name="baseScale">Base factor configured per chapter or step (e.g. 1.08).</param>
