@@ -16,6 +16,8 @@ internal static class RunUiPatches
 
 	private const string StatusCollapseBtnName = "BNKZEndlessModeStatusCollapseBtn";
 
+	private const string StatusFooterName = "BNKZEndlessModeStatusFooter";
+
 	private const string StatusTimerName = "BNKZEndlessModeStatusTimer";
 
 	private const string GameOverScanTimerName = "BNKZEndlessModeGameOverScanTimer";
@@ -47,6 +49,8 @@ internal static class RunUiPatches
 	private static RichTextLabel? _statusRichText;
 
 	private static Button? _statusCollapseBtn;
+
+	private static Label? _statusFooter;
 
 	public static void RecordNewRelic(object relic)
 	{
@@ -96,6 +100,13 @@ internal static class RunUiPatches
 			_statusCollapseBtn = collapseBtn;
 		}
 
+		Label? footer = _statusFooter;
+		if (!GodotObject.IsInstanceValid(footer))
+		{
+			footer = FindNamedDescendant(panel, StatusFooterName) as Label;
+			_statusFooter = footer;
+		}
+
 		try
 		{
 			object runManagerInstance = EndlessReflection.GetRunManagerInstance();
@@ -127,6 +138,10 @@ internal static class RunUiPatches
 			{
 				collapseBtn.Text = _hudCollapsed ? "[+]" : "[—]";
 				collapseBtn.TooltipText = _hudCollapsed ? "Expand Ribbon" : "Collapse Ribbon";
+			}
+			if (footer != null)
+			{
+				footer.Visible = !_hudCollapsed;
 			}
 
 			panel.ResetSize();
@@ -169,6 +184,7 @@ internal static class RunUiPatches
 			_statusPanel = existingPanel;
 			_statusRichText = FindNamedDescendant(existingPanel, StatusRichTextName) as RichTextLabel;
 			_statusCollapseBtn = FindNamedDescendant(existingPanel, StatusCollapseBtnName) as Button;
+			_statusFooter = FindNamedDescendant(existingPanel, StatusFooterName) as Label;
 			return;
 		}
 
@@ -215,6 +231,14 @@ internal static class RunUiPatches
 
 		panel.GuiInput += (@event) => HandlePanelDragInput(panel, @event);
 
+		VBoxContainer vbox = new VBoxContainer
+		{
+			Name = (StringName)"BNKZEndlessModeStatusVBox",
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		vbox.AddThemeConstantOverride((StringName)"separation", 1);
+
 		HBoxContainer hbox = new HBoxContainer
 		{
 			Name = (StringName)"BNKZEndlessModeStatusHBox",
@@ -255,12 +279,27 @@ internal static class RunUiPatches
 
 		hbox.AddChild(richText);
 		hbox.AddChild(collapseBtn);
-		panel.AddChild(hbox);
+		vbox.AddChild(hbox);
+
+		Label footerLabel = new Label
+		{
+			Name = (StringName)StatusFooterName,
+			Text = $"{EndlessBootstrap.ModTitle} v{EndlessBootstrap.ModVersion}",
+			HorizontalAlignment = HorizontalAlignment.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			Visible = !_hudCollapsed
+		};
+		footerLabel.AddThemeFontSizeOverride((StringName)"font_size", 10);
+		footerLabel.AddThemeColorOverride((StringName)"font_color", new Color(0.55f, 0.49f, 0.38f, 0.85f));
+		vbox.AddChild(footerLabel);
+
+		panel.AddChild(vbox);
 		((Node)runNode).AddChild(panel, false, (Node.InternalMode)0);
 
 		_statusPanel = panel;
 		_statusRichText = richText;
 		_statusCollapseBtn = collapseBtn;
+		_statusFooter = footerLabel;
 
 		UpdateStatusPanel(runNode);
 	}

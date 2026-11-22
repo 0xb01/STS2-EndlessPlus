@@ -172,12 +172,12 @@ internal static class EndlessRuntime
 		int value = EndlessReflection.GetCurrentActIndex(runState) + 1;
 		decimal enemyScalingMultiplier = GetEnemyScalingMultiplier(runState);
 		decimal enemyDamageScalingMultiplier = GetEnemyDamageScalingMultiplier(runState);
+		string prefix = currentChapter > 1 ? "[color=#f1c40f][b]∞ " : "[color=#f1c40f][b]";
+		string suffix = "[/b][/color]";
 		if (collapsed)
 		{
-			return $"[color=#f1c40f][b]∞ {currentChapter}-{value}[/b][/color]  [color=#ff6b6b]♥ x{enemyScalingMultiplier:0.##}[/color]  [color=#f39c12]⚔ x{enemyDamageScalingMultiplier:0.##}[/color]";
+			return $"{prefix}Chapter {currentChapter}{suffix} [color=#6e6557]·[/color] [color=#cfc7b8]Act {value}[/color]";
 		}
-		string prefix = currentChapter > 1 ? "[color=#f1c40f][b]∞ " : "";
-		string suffix = currentChapter > 1 ? "[/b][/color]" : "";
 		return $"{prefix}Chapter {currentChapter}{suffix} [color=#6e6557]·[/color] [color=#cfc7b8]Act {value}[/color]   [color=#5a4d3a]│[/color]   [color=#ff6b6b]♥ x{enemyScalingMultiplier:0.##}[/color]   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ x{enemyDamageScalingMultiplier:0.##}[/color]";
 	}
 

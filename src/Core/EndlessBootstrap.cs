@@ -11,7 +11,9 @@ namespace BNKZ.STS2.EndlessPlus;
 [ModInitializer("Initialize")]
 internal static class EndlessBootstrap
 {
-	private const string ModVersion = "1.0.3";
+	public const string ModTitle = "EndlessPlus";
+
+	public const string ModVersion = "1.0.3";
 
 	private static readonly Harmony Harmony = new Harmony("BNKZ.STS2.EndlessPlus");
 

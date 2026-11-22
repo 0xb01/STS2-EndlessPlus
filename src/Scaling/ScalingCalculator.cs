@@ -191,13 +191,17 @@ internal static class ScalingCalculator
 		int chapter = completedLoops + 1;
 		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
 		int steps = CalculateSteps(runState, settings);
+		string prefix = completedLoops > 0 ? "∞ " : "";
+
+		// When closed/collapsed, only show current Chapter, Act, and Endless indicator (no modifiers)
+		if (collapsed)
+		{
+			return $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+		}
 
 		if (steps <= 0)
 		{
-			string prefix = completedLoops > 0 ? "∞ " : "";
-			return collapsed
-				? $"[color=#f1c40f][b]{prefix}{chapter}-{act}[/b][/color]"
-				: $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+			return $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
 		}
 
 		decimal hpMult = GetHpMultiplier(runState);
@@ -209,11 +213,6 @@ internal static class ScalingCalculator
 
 		int flatHp = GetFlatHpBonus(runState);
 		int flatDmg = GetFlatDamageBonus(runState);
-
-		if (collapsed)
-		{
-			return $"[color=#f1c40f][b]∞ {chapter}-{act}[/b][/color]   [color=#ff6b6b]♥ {hpSign}{hpPct:0.#}%[/color]   [color=#f39c12]⚔ {dmgSign}{dmgPct:0.#}%[/color]";
-		}
 
 		string flatHpBb = flatHp > 0 ? $" [color=#cc8585](+{flatHp})[/color]" : "";
 		string flatDmgBb = flatDmg > 0 ? $" [color=#caa060](+{flatDmg})[/color]" : "";

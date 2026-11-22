@@ -72,15 +72,21 @@ public class EndlessPlusModConfig : SimpleModConfig
 		RegisterLocalizations();
 		base.SetupConfigUI(optionContainer);
 
+		var header = CreateRawLabelControl($"[color=#cfc7b8][b]{EndlessBootstrap.ModTitle}[/b] [color=#806b42]v{EndlessBootstrap.ModVersion}[/color][/color]", 20);
+		header.FitContent = true;
+		header.CustomMinimumSize = new Vector2(0, 30);
+		optionContainer.AddChild(header);
+		optionContainer.MoveChild(header, 0);
+
 		var disclaimer = CreateRawLabelControl("[color=#f1c40f][b]Notice:[/b] If playing on multiplayer/co-op, all users must have the same settings to avoid issues![/color]", 18);
 		disclaimer.FitContent = true;
 		disclaimer.CustomMinimumSize = new Vector2(0, 40);
 		optionContainer.AddChild(disclaimer);
-		optionContainer.MoveChild(disclaimer, 0);
+		optionContainer.MoveChild(disclaimer, 1);
 
 		var divider = CreateDividerControl();
 		optionContainer.AddChild(divider);
-		optionContainer.MoveChild(divider, 1);
+		optionContainer.MoveChild(divider, 2);
 	}
 
 	private void OnBaseLibConfigChanged(object? sender, EventArgs e)
@@ -168,7 +174,7 @@ public class EndlessPlusModConfig : SimpleModConfig
 			if (table == null) return;
 			table.MergeWith(new Dictionary<string, string>
 			{
-				{ "BNKZ.mod_title", "Endless Plus" },
+				{ "BNKZ.mod_title", $"EndlessPlus v{EndlessBootstrap.ModVersion}" },
 				{ "BNKZ-INTERVAL.title", "Scaling Interval" },
 				{ "BNKZ-INTERVAL.hover.desc", "Determines how frequently enemy stats scale up: Act transition, Chapter completion, or every Floor." },
 				{ "BNKZ-SKIP_CHAPTER_ONE.title", "Start scale on Chapter 2" },
