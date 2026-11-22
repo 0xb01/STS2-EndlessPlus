@@ -12,7 +12,9 @@ internal static class RunUiPatches
 
 	private const string StatusPanelName = "BNKZEndlessModeStatusPanel";
 
-	private const string StatusRichTextName = "BNKZEndlessModeStatusRichText";
+	private const string StatusHeaderRichTextName = "BNKZEndlessModeStatusHeaderRichText";
+
+	private const string StatusStatsRichTextName = "BNKZEndlessModeStatusStatsRichText";
 
 	private const string StatusCollapseBtnName = "BNKZEndlessModeStatusCollapseBtn";
 
@@ -46,7 +48,9 @@ internal static class RunUiPatches
 
 	private static PanelContainer? _statusPanel;
 
-	private static RichTextLabel? _statusRichText;
+	private static RichTextLabel? _statusHeaderRichText;
+
+	private static RichTextLabel? _statusStatsRichText;
 
 	private static Button? _statusCollapseBtn;
 
@@ -86,11 +90,18 @@ internal static class RunUiPatches
 			return;
 		}
 
-		RichTextLabel? richText = _statusRichText;
-		if (!GodotObject.IsInstanceValid(richText))
+		RichTextLabel? headerRichText = _statusHeaderRichText;
+		if (!GodotObject.IsInstanceValid(headerRichText))
 		{
-			richText = FindNamedDescendant(panel, StatusRichTextName) as RichTextLabel;
-			_statusRichText = richText;
+			headerRichText = FindNamedDescendant(panel, StatusHeaderRichTextName) as RichTextLabel;
+			_statusHeaderRichText = headerRichText;
+		}
+
+		RichTextLabel? statsRichText = _statusStatsRichText;
+		if (!GodotObject.IsInstanceValid(statsRichText))
+		{
+			statsRichText = FindNamedDescendant(panel, StatusStatsRichTextName) as RichTextLabel;
+			_statusStatsRichText = statsRichText;
 		}
 
 		Button? collapseBtn = _statusCollapseBtn;
@@ -111,34 +122,69 @@ internal static class RunUiPatches
 		{
 			object runManagerInstance = EndlessReflection.GetRunManagerInstance();
 			object runState = EndlessReflection.GetRunState(runManagerInstance);
-			if (richText != null)
-			{
-				string bbCode = EndlessRuntime.GetRunStatusBbCode(runState, _hudCollapsed);
-				richText.Text = bbCode;
-				string tooltip = EndlessRuntime.GetRunStatusTooltip(runState);
-				richText.TooltipText = tooltip;
-				panel.TooltipText = tooltip;
+			string tooltip = EndlessRuntime.GetRunStatusTooltip(runState);
+			panel.TooltipText = tooltip;
 
-				// Guarantee explicit minimum width so HBoxContainer does not compress RichTextLabel to 0px
-				string plain = Regex.Replace(bbCode, @"\[/?[^\]]+\]", "");
-				Font? font = richText.GetThemeFont((StringName)"normal_font");
-				int fontSize = richText.GetThemeFontSize((StringName)"normal_font_size");
+			// 1. Update Header Row (Chapter · Act + Endless indicator)
+			if (headerRichText != null)
+			{
+				string headerBbCode = EndlessRuntime.GetRunHeaderBbCode(runState);
+				headerRichText.Text = headerBbCode;
+				headerRichText.TooltipText = tooltip;
+
+				string plainHeader = Regex.Replace(headerBbCode, @"\[/?[^\]]+\]", "");
+				Font? font = headerRichText.GetThemeFont((StringName)"normal_font");
+				int fontSize = headerRichText.GetThemeFontSize((StringName)"normal_font_size");
 				if (fontSize <= 0)
 				{
 					fontSize = 15;
 				}
-				float fontWidth = font != null
-					? font.GetStringSize(plain, HorizontalAlignment.Left, -1f, fontSize).X
-					: (plain.Length * 9.5f);
-				int contentWidth = richText.GetContentWidth();
-				float targetWidth = Mathf.Max(contentWidth, fontWidth) + 10f;
-				richText.CustomMinimumSize = new Vector2(targetWidth, 22f);
+				float headerWidth = font != null
+					? font.GetStringSize(plainHeader, HorizontalAlignment.Left, -1f, fontSize).X
+					: (plainHeader.Length * 9.5f);
+				int contentWidth = headerRichText.GetContentWidth();
+				headerRichText.CustomMinimumSize = new Vector2(Mathf.Max(contentWidth, headerWidth) + 8f, 22f);
 			}
+
+			// 2. Update Stats Row (Modifiers underneath header, visible only when open)
+			if (statsRichText != null)
+			{
+				string? modifiersBbCode = EndlessRuntime.GetRunModifiersBbCode(runState);
+				if (!_hudCollapsed && !string.IsNullOrEmpty(modifiersBbCode))
+				{
+					statsRichText.Text = $"[center]{modifiersBbCode}[/center]";
+					statsRichText.TooltipText = tooltip;
+					statsRichText.Visible = true;
+
+					string plainStats = Regex.Replace(modifiersBbCode, @"\[/?[^\]]+\]", "");
+					Font? font = statsRichText.GetThemeFont((StringName)"normal_font");
+					int fontSize = statsRichText.GetThemeFontSize((StringName)"normal_font_size");
+					if (fontSize <= 0)
+					{
+						fontSize = 14;
+					}
+					float statsWidth = font != null
+						? font.GetStringSize(plainStats, HorizontalAlignment.Left, -1f, fontSize).X
+						: (plainStats.Length * 9.0f);
+					int contentWidth = statsRichText.GetContentWidth();
+					statsRichText.CustomMinimumSize = new Vector2(Mathf.Max(contentWidth, statsWidth) + 8f, 20f);
+				}
+				else
+				{
+					statsRichText.Visible = false;
+					statsRichText.Text = string.Empty;
+					statsRichText.CustomMinimumSize = Vector2.Zero;
+				}
+			}
+
+			// 3. Update Toggle Button
 			if (collapseBtn != null)
 			{
 				collapseBtn.Text = _hudCollapsed ? "[+]" : "[—]";
 				collapseBtn.TooltipText = _hudCollapsed ? "Expand Ribbon" : "Collapse Ribbon";
 			}
+
+			// 4. Update Footer (Mod title and version)
 			if (footer != null)
 			{
 				footer.Visible = !_hudCollapsed;
@@ -149,10 +195,6 @@ internal static class RunUiPatches
 		catch (Exception ex)
 		{
 			EndlessLog.Error("Failed to update status panel.", ex);
-			if (richText != null)
-			{
-				richText.Text = string.Empty;
-			}
 		}
 
 		if (!_isDraggingHud && _customHudPosition.HasValue)
@@ -182,7 +224,8 @@ internal static class RunUiPatches
 		if (existingPanelNode is PanelContainer existingPanel)
 		{
 			_statusPanel = existingPanel;
-			_statusRichText = FindNamedDescendant(existingPanel, StatusRichTextName) as RichTextLabel;
+			_statusHeaderRichText = FindNamedDescendant(existingPanel, StatusHeaderRichTextName) as RichTextLabel;
+			_statusStatsRichText = FindNamedDescendant(existingPanel, StatusStatsRichTextName) as RichTextLabel;
 			_statusCollapseBtn = FindNamedDescendant(existingPanel, StatusCollapseBtnName) as Button;
 			_statusFooter = FindNamedDescendant(existingPanel, StatusFooterName) as Label;
 			return;
@@ -209,9 +252,9 @@ internal static class RunUiPatches
 			CornerRadiusBottomLeft = 7,
 			CornerRadiusBottomRight = 7,
 			ContentMarginLeft = 14f,
-			ContentMarginRight = 10f,
-			ContentMarginTop = 4f,
-			ContentMarginBottom = 4f,
+			ContentMarginRight = 12f,
+			ContentMarginTop = 6f,
+			ContentMarginBottom = 5f,
 			ShadowColor = new Color(0f, 0f, 0f, 0.55f),
 			ShadowSize = 4
 		};
@@ -237,27 +280,28 @@ internal static class RunUiPatches
 			Alignment = BoxContainer.AlignmentMode.Center,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		vbox.AddThemeConstantOverride((StringName)"separation", 1);
+		vbox.AddThemeConstantOverride((StringName)"separation", 3);
 
-		HBoxContainer hbox = new HBoxContainer
+		HBoxContainer headerHBox = new HBoxContainer
 		{
-			Name = (StringName)"BNKZEndlessModeStatusHBox",
+			Name = (StringName)"BNKZEndlessModeStatusHeaderHBox",
 			Alignment = BoxContainer.AlignmentMode.Center,
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
-		hbox.AddThemeConstantOverride((StringName)"separation", 8);
+		headerHBox.AddThemeConstantOverride((StringName)"separation", 16);
 
-		RichTextLabel richText = new RichTextLabel
+		RichTextLabel headerRichText = new RichTextLabel
 		{
-			Name = (StringName)StatusRichTextName,
+			Name = (StringName)StatusHeaderRichTextName,
 			BbcodeEnabled = true,
 			FitContent = true,
 			ScrollActive = false,
 			MouseFilter = Control.MouseFilterEnum.Ignore,
-			AutowrapMode = TextServer.AutowrapMode.Off
+			AutowrapMode = TextServer.AutowrapMode.Off,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
 		};
-		richText.AddThemeFontSizeOverride((StringName)"normal_font_size", 15);
-		richText.AddThemeFontSizeOverride((StringName)"bold_font_size", 15);
+		headerRichText.AddThemeFontSizeOverride((StringName)"normal_font_size", 15);
+		headerRichText.AddThemeFontSizeOverride((StringName)"bold_font_size", 15);
 
 		Button collapseBtn = new Button
 		{
@@ -266,6 +310,7 @@ internal static class RunUiPatches
 			FocusMode = Control.FocusModeEnum.None,
 			Text = _hudCollapsed ? "[+]" : "[—]",
 			CustomMinimumSize = new Vector2(24f, 20f),
+			SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd,
 			MouseDefaultCursorShape = Control.CursorShape.PointingHand
 		};
 		collapseBtn.AddThemeFontSizeOverride((StringName)"font_size", 11);
@@ -277,9 +322,24 @@ internal static class RunUiPatches
 			UpdateStatusPanel(runNode);
 		};
 
-		hbox.AddChild(richText);
-		hbox.AddChild(collapseBtn);
-		vbox.AddChild(hbox);
+		headerHBox.AddChild(headerRichText);
+		headerHBox.AddChild(collapseBtn);
+		vbox.AddChild(headerHBox);
+
+		RichTextLabel statsRichText = new RichTextLabel
+		{
+			Name = (StringName)StatusStatsRichTextName,
+			BbcodeEnabled = true,
+			FitContent = true,
+			ScrollActive = false,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			AutowrapMode = TextServer.AutowrapMode.Off,
+			SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+			Visible = !_hudCollapsed
+		};
+		statsRichText.AddThemeFontSizeOverride((StringName)"normal_font_size", 14);
+		statsRichText.AddThemeFontSizeOverride((StringName)"bold_font_size", 14);
+		vbox.AddChild(statsRichText);
 
 		Label footerLabel = new Label
 		{
@@ -297,7 +357,8 @@ internal static class RunUiPatches
 		((Node)runNode).AddChild(panel, false, (Node.InternalMode)0);
 
 		_statusPanel = panel;
-		_statusRichText = richText;
+		_statusHeaderRichText = headerRichText;
+		_statusStatsRichText = statsRichText;
 		_statusCollapseBtn = collapseBtn;
 		_statusFooter = footerLabel;
 

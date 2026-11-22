@@ -179,29 +179,28 @@ internal static class ScalingCalculator
 	}
 
 	/// <summary>
-	/// Formats BBCode status string for Option A polished ribbon HUD banner.
+	/// Formats header status string (Chapter, Act, Endless indicator) without modifiers.
 	/// </summary>
-	/// <param name="runState">Current active run state object.</param>
-	/// <param name="collapsed">Whether HUD is rendered in compact single-stat format.</param>
-	/// <returns>Formatted BBCode string with color hierarchy.</returns>
-	public static string FormatStatusBbCode(object runState, bool collapsed)
+	public static string FormatHeaderBbCode(object runState)
 	{
 		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
 		int completedLoops = settings.LoopCount;
 		int chapter = completedLoops + 1;
 		int act = EndlessReflection.GetCurrentActIndex(runState) + 1;
-		int steps = CalculateSteps(runState, settings);
 		string prefix = completedLoops > 0 ? "∞ " : "";
+		return $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+	}
 
-		// When closed/collapsed, only show current Chapter, Act, and Endless indicator (no modifiers)
-		if (collapsed)
-		{
-			return $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
-		}
-
+	/// <summary>
+	/// Formats modifiers status string (HP and DMG percentage + flat bonuses).
+	/// </summary>
+	public static string? FormatModifiersBbCode(object runState)
+	{
+		EndlessScalingSettings settings = EndlessRuntime.GetActiveScalingSettings(runState);
+		int steps = CalculateSteps(runState, settings);
 		if (steps <= 0)
 		{
-			return $"[color=#f1c40f][b]{prefix}Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]";
+			return null;
 		}
 
 		decimal hpMult = GetHpMultiplier(runState);
@@ -217,7 +216,30 @@ internal static class ScalingCalculator
 		string flatHpBb = flatHp > 0 ? $" [color=#cc8585](+{flatHp})[/color]" : "";
 		string flatDmgBb = flatDmg > 0 ? $" [color=#caa060](+{flatDmg})[/color]" : "";
 
-		return $"[color=#f1c40f][b]∞ Chapter {chapter}[/b][/color] [color=#6e6557]·[/color] [color=#cfc7b8]Act {act}[/color]   [color=#5a4d3a]│[/color]   [color=#ff6b6b]♥ {hpSign}{hpPct:0.#}%[/color]{flatHpBb}   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ {dmgSign}{dmgPct:0.#}%[/color]{flatDmgBb}";
+		return $"[color=#ff6b6b]♥ {hpSign}{hpPct:0.#}%[/color]{flatHpBb}   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ {dmgSign}{dmgPct:0.#}%[/color]{flatDmgBb}";
+	}
+
+	/// <summary>
+	/// Formats BBCode status string for Option A polished ribbon HUD banner.
+	/// </summary>
+	/// <param name="runState">Current active run state object.</param>
+	/// <param name="collapsed">Whether HUD is rendered in compact single-stat format.</param>
+	/// <returns>Formatted BBCode string with color hierarchy.</returns>
+	public static string FormatStatusBbCode(object runState, bool collapsed)
+	{
+		string header = FormatHeaderBbCode(runState);
+		if (collapsed)
+		{
+			return header;
+		}
+
+		string? modifiers = FormatModifiersBbCode(runState);
+		if (string.IsNullOrEmpty(modifiers))
+		{
+			return header;
+		}
+
+		return $"{header}   [color=#5a4d3a]│[/color]   {modifiers}";
 	}
 
 	/// <summary>

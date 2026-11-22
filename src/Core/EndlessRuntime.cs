@@ -160,6 +160,41 @@ internal static class EndlessRuntime
 	}
 
 	/// <summary>
+	/// Formats header status string (Chapter, Act, Endless indicator) without modifiers.
+	/// </summary>
+	public static string GetRunHeaderBbCode(object runState)
+	{
+		if (EndlessConfig.OverrideHud)
+		{
+			return ScalingCalculator.FormatHeaderBbCode(runState);
+		}
+		int currentChapter = GetCurrentChapter(runState);
+		int value = EndlessReflection.GetCurrentActIndex(runState) + 1;
+		string prefix = currentChapter > 1 ? "[color=#f1c40f][b]∞ " : "[color=#f1c40f][b]";
+		string suffix = "[/b][/color]";
+		return $"{prefix}Chapter {currentChapter}{suffix} [color=#6e6557]·[/color] [color=#cfc7b8]Act {value}[/color]";
+	}
+
+	/// <summary>
+	/// Formats stat modifier string (HP and DMG percentage + flat bonuses).
+	/// </summary>
+	public static string? GetRunModifiersBbCode(object runState)
+	{
+		if (EndlessConfig.OverrideHud)
+		{
+			return ScalingCalculator.FormatModifiersBbCode(runState);
+		}
+		int currentChapter = GetCurrentChapter(runState);
+		if (currentChapter <= 1)
+		{
+			return null;
+		}
+		decimal enemyScalingMultiplier = GetEnemyScalingMultiplier(runState);
+		decimal enemyDamageScalingMultiplier = GetEnemyDamageScalingMultiplier(runState);
+		return $"[color=#ff6b6b]♥ x{enemyScalingMultiplier:0.##}[/color]   [color=#5a4d3a]│[/color]   [color=#f39c12]⚔ x{enemyDamageScalingMultiplier:0.##}[/color]";
+	}
+
+	/// <summary>
 	/// Formats top HUD banner BBCode status text based on active configuration.
 	/// </summary>
 	public static string GetRunStatusBbCode(object runState, bool collapsed)
